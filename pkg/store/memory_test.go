@@ -9,6 +9,9 @@ import (
 
 func TestNewMemory(t *testing.T) {
 	m := NewMemory()
-	m.Create(&text.Text{ID: "some-id"})
+	someText := &text.Text{ID: "some-id"}
+	created, err := m.Create(someText)
+	assert.NoError(t, err, "stores don't do validation")
+	assert.Equal(t, someText, created)
 	assert.Implements(t, (*Store)(nil), m)
 }

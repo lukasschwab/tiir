@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"log"
 	"time"
 
 	"github.com/lukasschwab/tiir/pkg/store"
@@ -48,8 +49,10 @@ func (s *Service) Delete(id string) (*text.Text, error) {
 // NOTE: should this really be random?
 func toID(text *text.Text) string {
 	h := md5.New()
-	for _, elem := range []string{text.URL, text.Author, text.Note} {
-		io.WriteString(h, elem)
+	for _, elem := range []string{text.Title, text.URL, text.Author, text.Note} {
+		if _, err := io.WriteString(h, elem); err != nil {
+			log.Fatalf("Couldn't hash text element: %v", err)
+		}
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)[:8])
 }
