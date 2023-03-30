@@ -13,11 +13,11 @@ import (
 
 // TODO: receive something implementing store.Store.
 func New(s store.Store) *Service {
-	return &Service{store: s}
+	return &Service{Store: s}
 }
 
 type Service struct {
-	store store.Store
+	Store store.Store
 }
 
 func (s *Service) Create(text *text.Text) (*text.Text, error) {
@@ -28,22 +28,22 @@ func (s *Service) Create(text *text.Text) (*text.Text, error) {
 	text.ID = toID(text)
 	text.Timestamp = time.Now()
 
-	return s.store.Create(text)
+	return s.Store.Create(text)
 }
 
 func (s *Service) Read(id string) (*text.Text, error) {
-	return s.store.Read(id)
+	return s.Store.Read(id)
 }
 
 func (s *Service) Update(id string, new *text.Text) (*text.Text, error) {
 	// Prevent confusion.
 	new.ID = id
 	// Don't validate: updates can be partial.
-	return s.store.Update(id, new)
+	return s.Store.Update(id, new)
 }
 
 func (s *Service) Delete(id string) (*text.Text, error) {
-	return s.store.Delete(id)
+	return s.Store.Delete(id)
 }
 
 // NOTE: should this really be random?
@@ -54,5 +54,5 @@ func toID(text *text.Text) string {
 			log.Fatalf("Couldn't hash text element: %v", err)
 		}
 	}
-	return fmt.Sprintf("%x", h.Sum(nil)[:8])
+	return fmt.Sprintf("%x", h.Sum(nil))[:8]
 }
