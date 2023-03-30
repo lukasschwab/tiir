@@ -1,0 +1,5 @@
+{{range .}}
+[{{.ID}}] {{.Title}}
+    {{.Author}} • {{.URL}}
+    {{.Note}}
+{{end}}
