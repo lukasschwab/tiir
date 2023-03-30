@@ -21,8 +21,10 @@ var (
 	completedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("27"))
 	noStyle        = lipgloss.NewStyle()
 
-	focusedButton = focusedStyle.Copy().Render("[ Submit ]")
-	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render("Submit"))
+	buttonText         = ":Create new record"
+	focusedButtonStyle = lipgloss.NewStyle().Background(lipgloss.Color("205"))
+	focusedButton      = focusedButtonStyle.Render(buttonText)
+	blurredButton      = blurredStyle.Render(buttonText)
 )
 
 const (
@@ -172,8 +174,6 @@ func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 func (m model) View() string {
 	var b strings.Builder
 
-	b.WriteString("Creating a new record...\n\n")
-
 	for i := range m.inputs {
 		b.WriteString(m.inputs[i].View())
 		if i < len(m.inputs)-1 {
@@ -185,7 +185,7 @@ func (m model) View() string {
 	if m.focusIndex == len(m.inputs) {
 		button = &focusedButton
 	}
-	fmt.Fprintf(&b, "\n\n%s\n\n", *button)
+	fmt.Fprintf(&b, "\n%s\n", *button)
 
 	return b.String()
 }
