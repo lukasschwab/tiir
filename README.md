@@ -32,3 +32,4 @@ Finally, it's an opportunity to learn new corners of Go.
 + `text/template` and associated APIs.
 + [Fiber](https://gofiber.io/) may provide more pluggable HTTP patterns, though I'm fond of vanilla HTTP.
 + CLI utilities like the [Charm](https://github.com/charmbracelet) family.
++ [Fly.io](https://fly.io/docs/languages-and-frameworks/golang/) and/or Tailscale for hosting.
