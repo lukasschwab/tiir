@@ -98,7 +98,7 @@ func main() {
 	})
 
 	go func() {
-		if err := app.Listen(":3000"); err != nil {
+		if err := app.Listen(":8080"); err != nil {
 			log.Fatalf("shutting down: %v", err)
 		}
 	}()

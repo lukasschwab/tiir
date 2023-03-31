@@ -47,5 +47,6 @@ Finally, it's an opportunity to learn new corners of Go.
 + Using embed for templates to resolve paths.
     + Google reveals tis is very normal, but I realized it on my own because of [that one quite repo.](https://github.com/eliben/go-quines/blob/main/quine-source-embed.go)
     + The issue: running tests from inside pkg/render worked, but running the app from root did not.
++ File as database is insipired by Tailscale... but I could probably optimize it for long-running server use.
 
 One nice thing about interfaces: defining them early lets you implement things out-of-order. You can write pkg/tir *assuming* something will implement pkg/store. Don't get it quite right? Tweak it later.

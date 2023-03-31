@@ -1,0 +1,38 @@
+# fly.toml file generated for tir on 2023-03-31T10:23:17-07:00
+
+app = "tir"
+kill_signal = "SIGINT"
+kill_timeout = 5
+primary_region = "sjc"
+processes = []
+
+[build]
+  builder = "paketobuildpacks/builder:base"
+  buildpacks = ["gcr.io/paketo-buildpacks/go"]
+
+[env]
+  PORT = "8080"
+  HOME = "/home"
+
+# Assumes /home is the home directory.
+[mounts]
+  source = "tir_data"
+  destination = "/home"
+
+[[services]]
+  internal_port = 8080
+  processes = ["app"]
+  protocol = "tcp"
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    force_https = true
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
