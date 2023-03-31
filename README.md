@@ -44,3 +44,8 @@ Finally, it's an opportunity to learn new corners of Go.
 + Question: am I over-modularizing? I should look at the graph and see if I have modules with single dependents.
 + Text is its own module to avoid cyclical dependencies between pkg/store and pkg/tir.
     + Do I move this to a proto definition eventually? If yes, I can maybe move the various helpers from pkg/text into pkg/tir.
++ Using embed for templates to resolve paths.
+    + Google reveals tis is very normal, but I realized it on my own because of [that one quite repo.](https://github.com/eliben/go-quines/blob/main/quine-source-embed.go)
+    + The issue: running tests from inside pkg/render worked, but running the app from root did not.
+
+One nice thing about interfaces: defining them early lets you implement things out-of-order. You can write pkg/tir *assuming* something will implement pkg/store. Don't get it quite right? Tweak it later.

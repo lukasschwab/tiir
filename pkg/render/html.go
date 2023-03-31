@@ -10,7 +10,7 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-//go:embed templates/html
+//go:embed templates/html.tmpl
 var htmlTemplate string
 
 // HTML table rednering for texts, grouped by their Timestamp date. HTML assumes

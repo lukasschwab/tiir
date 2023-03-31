@@ -9,7 +9,7 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-//go:embed templates/plain
+//go:embed templates/plain.tmpl
 var plainTextTemplate string
 
 // Plain text rendering for texts.

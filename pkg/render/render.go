@@ -13,6 +13,3 @@ import (
 
 // Function rendering texts to the provided io.Writer.
 type Function func(texts []*text.Text, to io.Writer) error
-
-// TODO: standardize on either single-method interfaces *or* exported function
-// types. https://eli.thegreenplace.net/2023/the-power-of-single-method-interfaces-in-go/
