@@ -5,6 +5,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/lukasschwab/tiir/pkg/edit"
+	"github.com/lukasschwab/tiir/pkg/store"
+	"github.com/lukasschwab/tiir/pkg/text"
+	"github.com/lukasschwab/tiir/pkg/tir"
 	"github.com/spf13/cobra"
 )
 
@@ -17,6 +21,20 @@ var rootCmd = &cobra.Command{
 		if !verbose {
 			log.SetOutput(io.Discard)
 		}
+
+		// FIXME: these are dummy values. Need to actually get them from config;
+		// see viper.
+		configuredService = &tir.Service{Store: store.NewMemory(&text.Text{
+			ID:     "abc123de",
+			URL:    "Initial URL",
+			Title:  "Initial Title",
+			Author: "Initial Author",
+			Note:   "Initial Note",
+		})}
+		configuredEditor = edit.Tea{}
+	},
+	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+		return configuredService.Close()
 	},
 }
 

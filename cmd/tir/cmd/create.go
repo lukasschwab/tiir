@@ -20,10 +20,9 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initial := &text.Text{}
-		// TODO: parameterize the editor.
-		if final, err := configEditor().Update(initial); err != nil {
+		if final, err := configuredEditor.Update(initial); err != nil {
 			log.Fatalf("couldn't run editor: %v", err)
-		} else if created, err := configService().Create(final); err != nil {
+		} else if created, err := configuredService.Create(final); err != nil {
 			log.Fatalf("error comitting new record: %v", err)
 		} else if repr, err := json.MarshalIndent(created, "", "\t"); err != nil {
 			log.Fatalf("error representing created record '%v': %v", created.ID, err)

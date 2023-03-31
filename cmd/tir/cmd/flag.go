@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Flags.
 var (
 	specifiedTextID string
 	verbose         bool
