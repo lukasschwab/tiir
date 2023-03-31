@@ -64,6 +64,14 @@ func (s *Service) Delete(id string) (*text.Text, error) {
 	return s.Store.Delete(id)
 }
 
+func (s *Service) List() ([]*text.Text, error) {
+	// TODO; parameterize the sort order.
+	return s.Store.List(text.Order{
+		Compare:   text.Timestamps,
+		Direction: text.Descending,
+	})
+}
+
 func (s *Service) Close() error {
 	return s.Store.Close()
 }
