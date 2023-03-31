@@ -13,10 +13,12 @@ import (
 // arbitrary application?
 
 // Vim editor for texts. Uses a temporary file for every Update call.
-type Vim struct{}
+const Vim vimEditor = iota
+
+type vimEditor int
 
 // Update implements Editor.
-func (v Vim) Update(initial *text.Text) (final *text.Text, err error) {
+func (v vimEditor) Update(initial *text.Text) (final *text.Text, err error) {
 	f, err := os.CreateTemp("", "meta.*.json")
 	if err != nil {
 		return nil, fmt.Errorf("error creating temp file: %w", err)

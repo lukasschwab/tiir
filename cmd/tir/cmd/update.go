@@ -20,7 +20,7 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if initial, err := configuredService.Read(specifiedTextID); err != nil {
 			log.Fatalf("text not found for ID: '%v'", specifiedTextID)
-		} else if final, err := configuredEditor.Update(initial); err != nil {
+		} else if final, err := initial.EditWith(configuredEditor); err != nil {
 			log.Fatalf("couldn't run editor: %v", err)
 		} else if updated, err := configuredService.Update(specifiedTextID, final); err != nil {
 			log.Fatalf("error comitting new record: %v", err)

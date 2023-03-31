@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/lukasschwab/tiir/pkg/edit"
+	"github.com/lukasschwab/tiir/pkg/text"
 	"github.com/lukasschwab/tiir/pkg/tir"
 	"github.com/spf13/cobra"
 )
@@ -13,7 +14,7 @@ import (
 // Config properties initialized and closed by rootCmd pre- and post-run funcs.
 var (
 	configuredService *tir.Service
-	configuredEditor  edit.Editor
+	configuredEditor  text.Editor
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -26,7 +27,7 @@ var rootCmd = &cobra.Command{
 			log.SetOutput(io.Discard)
 		}
 		configuredService, _ = tir.FromConfig()
-		configuredEditor = edit.Tea{}
+		configuredEditor = edit.Tea
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 		return configuredService.Close()

@@ -10,11 +10,13 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-// Tea editor for texts.
-type Tea struct{}
+// Tea based text.Editor for the command line..
+const Tea teaEditor = iota
+
+type teaEditor int
 
 // Update implements Editor.
-func (t Tea) Update(initial *text.Text) (final *text.Text, err error) {
+func (t teaEditor) Update(initial *text.Text) (final *text.Text, err error) {
 	final = new(text.Text)
 	if _, err = tea.NewProgram(initialModel(initial, final)).Run(); err != nil {
 		err = fmt.Errorf("could not start tea editor: %w", err)

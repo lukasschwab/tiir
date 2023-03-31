@@ -32,3 +32,14 @@ func (t *Text) Validate() error {
 		return nil
 	}
 }
+
+// EditWith gets updates to t from the user with e.
+func (t *Text) EditWith(e Editor) (final *Text, err error) {
+	return e.Update(t)
+}
+
+// Editor for text. Update returns user updates to initial; it may modify
+// initial in place, but that behavior isn't guaranteed.
+type Editor interface {
+	Update(initial *Text) (final *Text, err error)
+}
