@@ -1,5 +1,6 @@
-{{range .}}
-[{{.ID}}] {{.Title}}
-    {{.Author}} • {{.URL}}
+{{range .}}[{{.ID}}] {{.Title}} ({{printf "%d-%d-%d" (.Timestamp.Year) (.Timestamp.Month) (.Timestamp.Day)}})
+{{.Author}} @ {{.URL}}
+
     {{.Note}}
+
 {{end}}

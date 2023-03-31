@@ -1,6 +1,7 @@
 package render
 
 import (
+	_ "embed"
 	"fmt"
 	"io"
 	"text/template"
@@ -10,8 +11,11 @@ import (
 
 type plain struct{}
 
+//go:embed templates/plain
+var plainTextTemplate string
+
 func (p plain) Render(texts []*text.Text, to io.Writer) error {
-	tmpl, err := template.New("plain").ParseFiles("./templates/plain")
+	tmpl, err := template.New("plain").Parse(plainTextTemplate)
 	if err != nil {
 		return fmt.Errorf("error parsing template: %w", err)
 	}
