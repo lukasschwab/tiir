@@ -60,6 +60,8 @@ const (
 	StoreTypeHTTP StoreType = "http"
 )
 
+var StoreOptions = []string{string(StoreTypeFile), string(StoreTypeMemory), string(StoreTypeHTTP)}
+
 var StoreFactories = map[StoreType]func() (store.Store, error){
 	StoreTypeFile: func() (store.Store, error) {
 		filepath := viper.GetString(ConfigFileStoreLocation)
@@ -91,6 +93,8 @@ const (
 	// EditorTypeTea selects the edit.Tea editor (default).
 	EditorTypeTea EditorType = "tea"
 )
+
+var EditorOptions = []string{string(EditorTypeVim), string(EditorTypeTea)}
 
 var Editors = map[EditorType]text.Editor{
 	EditorTypeVim: edit.Vim,

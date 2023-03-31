@@ -5,10 +5,12 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/lukasschwab/tiir/pkg/text"
 	"github.com/lukasschwab/tiir/pkg/tir"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // Config properties initialized and closed by rootCmd pre- and post-run funcs.
@@ -55,4 +57,20 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose logging")
+
+	flagStore := "store"
+	rootCmd.PersistentFlags().StringP(flagStore, "s", "file", fmt.Sprintf("store to use (%v)", strings.Join(tir.StoreOptions, ", ")))
+	viper.BindPFlag(tir.ConfigStoreType, rootCmd.PersistentFlags().Lookup(flagStore))
+
+	flagFileLocation := "file-location"
+	rootCmd.PersistentFlags().String(flagFileLocation, "$HOME/.tir.json", "if store is 'file,' specifies file to use")
+	viper.BindPFlag(tir.ConfigFileStoreLocation, rootCmd.PersistentFlags().Lookup(flagFileLocation))
+
+	flagBaseURL := "base-url"
+	rootCmd.PersistentFlags().String(flagBaseURL, "", "when store is 'http,' specifies service URL to use")
+	viper.BindPFlag(tir.ConfigHTTPStoreBaseURL, rootCmd.PersistentFlags().Lookup(flagBaseURL))
+
+	flagEditor := "editor"
+	rootCmd.PersistentFlags().StringP(flagEditor, "e", "tea", fmt.Sprintf("editor to use (%v)", strings.Join(tir.EditorOptions, ", ")))
+	viper.BindPFlag(tir.ConfigHTTPStoreBaseURL, rootCmd.PersistentFlags().Lookup(flagEditor))
 }
