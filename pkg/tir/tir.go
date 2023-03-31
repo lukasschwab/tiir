@@ -29,7 +29,7 @@ func (s *Service) Create(text *text.Text) (*text.Text, error) {
 	text.ID = toID(text)
 	text.Timestamp = time.Now()
 
-	return s.Store.Create(text)
+	return s.Store.Upsert(text)
 }
 
 func (s *Service) Read(id string) (*text.Text, error) {
@@ -57,7 +57,7 @@ func (s *Service) Update(id string, updates *text.Text) (*text.Text, error) {
 	}
 
 	// Don't validate: updates can be partial.
-	return s.Store.Update(id, applied)
+	return s.Store.Upsert(applied)
 }
 
 func (s *Service) Delete(id string) (*text.Text, error) {

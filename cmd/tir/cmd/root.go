@@ -7,7 +7,6 @@ import (
 
 	"github.com/lukasschwab/tiir/pkg/edit"
 	"github.com/lukasschwab/tiir/pkg/store"
-	"github.com/lukasschwab/tiir/pkg/text"
 	"github.com/lukasschwab/tiir/pkg/tir"
 	"github.com/spf13/cobra"
 )
@@ -22,15 +21,29 @@ var rootCmd = &cobra.Command{
 			log.SetOutput(io.Discard)
 		}
 
+		// TODO: if the file doesn't exist, create it: {}.
+		// if file, err := os.Open("~/.tir.json"); err != nil {
+		// 	log.Printf("error opening tir file: %v", err)
+		// } else {
+		// 	configuredService = &tir.Service{Store: &store.File{File: file}}
+		// }
+		if home, err := os.UserHomeDir(); err != nil {
+			log.Fatalf("error getting user home directory: %v", err)
+		} else if store, err := store.OpenOrCreateFile(home + "/.tir.json"); err != nil {
+			log.Fatalf("error opening tir file: %v", err)
+		} else {
+			configuredService = &tir.Service{Store: store}
+		}
+
 		// FIXME: these are dummy values. Need to actually get them from config;
 		// see viper.
-		configuredService = &tir.Service{Store: store.NewMemory(&text.Text{
-			ID:     "abc123de",
-			URL:    "Initial URL",
-			Title:  "Initial Title",
-			Author: "Initial Author",
-			Note:   "Initial Note",
-		})}
+		// configuredService = &tir.Service{Store: store.NewMemory(&text.Text{
+		// 	ID:     "abc123de",
+		// 	URL:    "Initial URL",
+		// 	Title:  "Initial Title",
+		// 	Author: "Initial Author",
+		// 	Note:   "Initial Note",
+		// })}
 		configuredEditor = edit.Tea{}
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {

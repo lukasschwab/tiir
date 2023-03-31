@@ -48,6 +48,14 @@ func (m *memory) Read(id string) (*text.Text, error) {
 	return text, nil
 }
 
+func (m *memory) Upsert(t *text.Text) (*text.Text, error) {
+	m.Lock()
+	defer m.Unlock()
+
+	m.texts[t.ID] = t
+	return t, nil
+}
+
 func (m *memory) Update(id string, new *text.Text) (*text.Text, error) {
 	m.Lock()
 	defer m.Unlock()

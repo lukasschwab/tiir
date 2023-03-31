@@ -87,6 +87,20 @@ func (f *File) Read(id string) (*text.Text, error) {
 	return text, nil
 }
 
+func (f *File) Upsert(t *text.Text) (*text.Text, error) {
+	texts, err := f.parse()
+	if err != nil {
+		return nil, err
+	}
+
+	texts[t.ID] = t
+
+	if err := f.commit(texts); err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
 func (f *File) Update(id string, new *text.Text) (*text.Text, error) {
 	texts, err := f.parse()
 	if err != nil {
