@@ -9,6 +9,7 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
+// JSONFeed rendering for texts.
 func JSONFeed(texts []*text.Text, to io.Writer) error {
 	items := make([]jsonfeed.Item, len(texts))
 	for i, text := range texts {

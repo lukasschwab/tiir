@@ -1,6 +1,7 @@
 package tir
 
 import (
+	"io"
 	"testing"
 
 	"github.com/lukasschwab/tiir/pkg/store"
@@ -9,6 +10,8 @@ import (
 )
 
 func TestService(t *testing.T) {
+	assert.Implements(t, (*io.Closer)(nil), new(Service))
+
 	s := New(store.UseMemory())
 
 	original := &text.Text{Author: "a", Note: "n", URL: "u", Title: "t"}

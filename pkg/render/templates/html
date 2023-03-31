@@ -48,7 +48,6 @@
 
 <hr/>
 
-<!-- TODO: bucket entries by day before rendering. -->
 <table class="table">
     <tr>
         <th>Title</th>

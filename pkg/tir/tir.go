@@ -1,4 +1,4 @@
-// package tir provides the interface-facing CRUD service.
+// Package tir provides the interface-facing CRUD service.
 package tir
 
 import (
@@ -13,8 +13,11 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
+// FromConfig loads a tir.Service from defaults, overridden by user-provided
+// configuration.
+//
+// TODO: actually use a config!
 func FromConfig() (*Service, error) {
-	// TODO: actually use a config!
 	if home, err := os.UserHomeDir(); err != nil {
 		return nil, fmt.Errorf("error getting user home directory: %v", err)
 	} else if store, err := store.UseFile(home + "/.tir.json"); err != nil {
@@ -24,14 +27,19 @@ func FromConfig() (*Service, error) {
 	}
 }
 
+// New constructs a new Service around s.
 func New(s store.Store) *Service {
 	return &Service{Store: s}
 }
 
+// Service for managing tir texts.
+//
+// TODO: don't expose Service's internals; expose an interface.
 type Service struct {
 	Store store.Store
 }
 
+// Create a text.
 func (s *Service) Create(text *text.Text) (*text.Text, error) {
 	if err := text.Validate(); err != nil {
 		return nil, err
@@ -43,10 +51,12 @@ func (s *Service) Create(text *text.Text) (*text.Text, error) {
 	return s.Store.Upsert(text)
 }
 
+// Read a text by ID.
 func (s *Service) Read(id string) (*text.Text, error) {
 	return s.Store.Read(id)
 }
 
+// Update a text by ID and return teh resulting text.
 func (s *Service) Update(id string, updates *text.Text) (*text.Text, error) {
 	applied, err := s.Store.Read(id)
 	if err != nil {
@@ -71,15 +81,18 @@ func (s *Service) Update(id string, updates *text.Text) (*text.Text, error) {
 	return s.Store.Upsert(applied)
 }
 
+// Delete a text by ID and return the deleted text.
 func (s *Service) Delete(id string) (*text.Text, error) {
 	return s.Store.Delete(id)
 }
 
+// List all texts available to the service.
 func (s *Service) List() ([]*text.Text, error) {
 	// TODO; parameterize the sort order.
 	return s.Store.List(text.Timestamps, text.Descending)
 }
 
+// Close the underlying Store.
 func (s *Service) Close() error {
 	return s.Store.Close()
 }

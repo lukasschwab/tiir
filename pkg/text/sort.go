@@ -2,14 +2,19 @@ package text
 
 import "sort"
 
+// Sort these texts.
 type Sort []*Text
 
+// By the provided comparator and direction, sort the texts in s in place.
 func (s Sort) By(c Comparator, d Direction) {
 	sort.Sort(&textSorter{Sort: s, compare: c, direction: d})
 }
 
+// A Comparator determines which of two texts is "lesser" for sorting.
 type Comparator func(t1, t2 *Text) bool
 
+// A Direction determines whether to apply a comparator in [Ascending] or
+// [Descending] order.
 type Direction int
 
 // You can sort texts in Ascending or Descending direction.

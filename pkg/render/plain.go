@@ -1,7 +1,7 @@
 package render
 
 import (
-	_ "embed"
+	_ "embed" // Compile-time dependency.
 	"fmt"
 	"io"
 	"text/template"
@@ -12,6 +12,7 @@ import (
 //go:embed templates/plain
 var plainTextTemplate string
 
+// Plain text rendering for texts.
 func Plain(texts []*text.Text, to io.Writer) error {
 	tmpl, err := template.New("plain").Parse(plainTextTemplate)
 	if err != nil {

@@ -1,5 +1,5 @@
-// text is the data model: it's a text you read. Everything else is managing
-// texts.
+// Package text is the core data model: it's a text you read. Everything else is
+// managing texts.
 package text
 
 import (
@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Text you read and recorded in this application.
 type Text struct {
 	Title     string    `json:"title"`
 	URL       string    `json:"url"`

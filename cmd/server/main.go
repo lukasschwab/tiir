@@ -44,11 +44,12 @@ func main() {
 			c.Status(fiber.StatusBadRequest)
 			return fmt.Errorf("error parsing request body: %w", err)
 		}
-		if created, err := configuredService.Create(t); err != nil {
+
+		created, err := configuredService.Create(t)
+		if err != nil {
 			return fmt.Errorf("error writing record: %w", err)
-		} else {
-			return c.Status(fiber.StatusCreated).JSON(created)
 		}
+		return c.Status(fiber.StatusCreated).JSON(created)
 	})
 
 	// Update text by ID.
@@ -65,11 +66,11 @@ func main() {
 			return fmt.Errorf("error parsing request body: %w", err)
 		}
 
-		if updated, err := configuredService.Update(id, updates); err != nil {
+		updated, err := configuredService.Update(id, updates)
+		if err != nil {
 			return fmt.Errorf("error updating record: %w", err)
-		} else {
-			return c.Status(fiber.StatusOK).JSON(updated)
 		}
+		return c.Status(fiber.StatusOK).JSON(updated)
 	})
 
 	// Delete text by ID.
@@ -80,11 +81,11 @@ func main() {
 			return errors.New("update request must specify record ID")
 		}
 
-		if deleted, err := configuredService.Delete(id); err != nil {
+		deleted, err := configuredService.Delete(id)
+		if err != nil {
 			return fmt.Errorf("error deleting record: %w", err)
-		} else {
-			return c.Status(fiber.StatusOK).JSON(deleted)
 		}
+		return c.Status(fiber.StatusOK).JSON(deleted)
 	})
 
 	// List all texts.

@@ -1,7 +1,7 @@
 package render
 
 import (
-	_ "embed"
+	_ "embed" // Compile-time dependency.
 	"fmt"
 	"io"
 	"text/template"
@@ -13,6 +13,8 @@ import (
 //go:embed templates/html
 var htmlTemplate string
 
+// HTML table rednering for texts, grouped by their Timestamp date. HTML assumes
+// texts are sorted by Timestamp, Descending; see [text.Sort].
 func HTML(texts []*text.Text, to io.Writer) error {
 	tmpl, err := template.New("html").Parse(htmlTemplate)
 	if err != nil {

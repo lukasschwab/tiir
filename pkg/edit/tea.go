@@ -10,8 +10,10 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
+// Tea editor for texts.
 type Tea struct{}
 
+// Update implements Editor.
 func (t Tea) Update(initial *text.Text) (final *text.Text, err error) {
 	final = new(text.Text)
 	if _, err = tea.NewProgram(initialModel(initial, final)).Run(); err != nil {
