@@ -31,7 +31,7 @@ var (
 	completedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("27"))
 	noStyle        = lipgloss.NewStyle()
 
-	buttonText         = ":Create new record"
+	buttonText         = ":Submit record"
 	focusedButtonStyle = lipgloss.NewStyle().Background(lipgloss.Color("205"))
 	focusedButton      = focusedButtonStyle.Render(buttonText)
 	blurredButton      = blurredStyle.Render(buttonText)

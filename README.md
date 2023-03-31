@@ -10,6 +10,7 @@ A flexible successor to [tir](https://github.com/lukasschwab/tir), but not a dro
     + Remote file (i.e. backed up to git).[^bak]
 + Support multiple editor interfaces.
     + Updated simple CLI, like the current interface.[^cb]
+        + Improved text editing experience; go back to a field you've already submitted.
     + `vim` editor for JSON, like I use in [id3ed](https://github.com/lukasschwab/id3ed).
     + REST API service.[^tailscale]
 + Support multiple representations; most of these are already rendered by existing tir.
@@ -39,3 +40,7 @@ Finally, it's an opportunity to learn new corners of Go.
 + I'm gravitating towards single-method interfaces; [thanks Eli Bendersky.](https://eli.thegreenplace.net/2023/the-power-of-single-method-interfaces-in-go/)
 + I'm moving most of the `text.Text` manipulation into `text`, even if it only has a single caller. It's nice to put the pluggable types in one place. You shouldn't need `pkg/edit` to override its built-in editors.
     + Ultimately, the cmd dependencies on `pkg/edit` may get moved to `tir`... or wherever we do the config processing.
++ I'm leaning hard on interfaces. Conveniently, Jimmy Koppel posted a bit on their importance: https://www.pathsensitive.com/2023/03/modules-matter-most-for-masses.html
++ Question: am I over-modularizing? I should look at the graph and see if I have modules with single dependents.
++ Text is its own module to avoid cyclical dependencies between pkg/store and pkg/tir.
+    + Do I move this to a proto definition eventually? If yes, I can maybe move the various helpers from pkg/text into pkg/tir.
