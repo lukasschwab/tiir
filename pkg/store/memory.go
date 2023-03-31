@@ -83,3 +83,7 @@ func (m *memory) Delete(id string) (*text.Text, error) {
 	delete(m.texts, id)
 	return text, nil
 }
+
+func (m *memory) Close() error {
+	return nil
+}

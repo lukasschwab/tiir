@@ -110,3 +110,7 @@ func (f *File) Delete(id string) (*text.Text, error) {
 	}
 	return text, nil
 }
+
+func (f *File) Close() error {
+	return f.File.Close()
+}

@@ -17,4 +17,7 @@ type Store interface {
 	// Delete a text by ID and return the deleted text.
 	Delete(id string) (*text.Text, error)
 	// TODO: introduce an ordered List function for supporting templates.
+
+	// Close implements io.Closer.
+	Close() error
 }

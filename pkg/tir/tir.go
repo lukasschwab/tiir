@@ -46,6 +46,10 @@ func (s *Service) Delete(id string) (*text.Text, error) {
 	return s.Store.Delete(id)
 }
 
+func (s *Service) Close() error {
+	return s.Store.Close()
+}
+
 // NOTE: should this really be random?
 func toID(text *text.Text) string {
 	h := md5.New()
