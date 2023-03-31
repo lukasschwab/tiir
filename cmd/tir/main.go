@@ -1,9 +1,8 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package main
 
 import "github.com/lukasschwab/tiir/cmd/tir/cmd"
+
+// FIXME: proper docstrings all around.
 
 func main() {
 	cmd.Execute()

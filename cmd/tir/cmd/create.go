@@ -1,19 +1,17 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
 
+	"github.com/lukasschwab/tiir/pkg/text"
 	"github.com/spf13/cobra"
 )
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "A brief description of your command",
+	Short: "Record a text you read",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
@@ -21,13 +19,22 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("create called")
+		initial := &text.Text{}
+		// TODO: parameterize the editor.
+		if final, err := configEditor().Update(initial); err != nil {
+			log.Fatalf("couldn't run editor: %v", err)
+		} else if created, err := configService().Create(final); err != nil {
+			log.Fatalf("error comitting new record: %v", err)
+		} else if repr, err := json.MarshalIndent(created, "", "\t"); err != nil {
+			log.Fatalf("error representing created record '%v': %v", created.ID, err)
+		} else {
+			log.Printf("successfully created record %v: %s", created.ID, repr)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(createCmd)
-
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

@@ -1,9 +1,8 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
+	"io"
+	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -14,9 +13,11 @@ var rootCmd = &cobra.Command{
 	Use:   "tir",
 	Short: "Log what you read",
 	Long:  `tir ('Today I Read...') is a tool for logging the articles you read.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) {},
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if !verbose {
+			log.SetOutput(io.Discard)
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -37,5 +38,5 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose logging")
 }

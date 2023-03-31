@@ -1,11 +1,8 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -13,7 +10,7 @@ import (
 // deleteCmd represents the delete command
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "A brief description of your command",
+	Short: "Delete your record of a text you read",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
@@ -21,20 +18,20 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("delete called")
+		service := configService()
+
+		if deleted, err := service.Delete(specifiedTextID); err != nil {
+			log.Fatalf("error deleting record: %v", err)
+		} else if repr, err := json.MarshalIndent(deleted, "", "\t"); err != nil {
+			log.Fatalf("error representing deleted record '%v': %v", deleted.ID, err)
+		} else {
+			log.Printf("successfully deleted record %v: %s", deleted.ID, repr)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(deleteCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// deleteCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// deleteCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	requireID(deleteCmd)
 }

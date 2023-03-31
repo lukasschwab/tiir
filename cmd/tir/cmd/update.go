@@ -1,10 +1,8 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -12,7 +10,7 @@ import (
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "A brief description of your command",
+	Short: "Update your record of a text you read",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
@@ -20,20 +18,24 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("update called")
+		service := configService()
+
+		if initial, err := service.Read(specifiedTextID); err != nil {
+			log.Fatalf("text not found for ID: '%v'", specifiedTextID)
+		} else if final, err := configEditor().Update(initial); err != nil {
+			log.Fatalf("couldn't run editor: %v", err)
+		} else if updated, err := service.Update(specifiedTextID, final); err != nil {
+			log.Fatalf("error comitting new record: %v", err)
+		} else if repr, err := json.MarshalIndent(updated, "", "\t"); err != nil {
+			log.Fatalf("error representing updated record '%v': %v", updated.ID, err)
+		} else {
+			log.Printf("successfully updated record %v: %s", updated.ID, repr)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(updateCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// updateCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// updateCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	requireID(updateCmd)
 }
