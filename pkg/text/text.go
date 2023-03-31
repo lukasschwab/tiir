@@ -9,11 +9,11 @@ import (
 )
 
 type Text struct {
-	ID        string
 	Title     string
 	URL       string
 	Author    string
 	Note      string
+	ID        string
 	Timestamp time.Time
 }
 
