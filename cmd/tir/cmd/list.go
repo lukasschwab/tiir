@@ -3,18 +3,22 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lukasschwab/tiir/pkg/render"
 	"github.com/lukasschwab/tiir/pkg/text"
 	"github.com/spf13/cobra"
 )
 
+var output string
+
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "A brief description of your command",
+	Short: "List all the texts you recorded reading",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
@@ -22,21 +26,18 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		renderFunc, ok := outputRenderers[outputFormat(output)]
+		if !ok {
+			log.Fatalf("Invalid renderer type '%s'; use one of %v", output, strings.Join(rendererOptions, ", "))
+		}
+
 		texts, err := configuredService.List()
 		if err != nil {
 			log.Fatalf("Error listing texts: %v", err)
 		}
 
-		// NOTE: this is plaintext rendering.
-		// if err := render.Plain.Render(texts, cmd.OutOrStdout()); err != nil {
-		// 	log.Fatalf("Error writing texts: %v", err)
-		// }
-
-		m := model{list: list.New(items(texts), list.NewDefaultDelegate(), 0, 0)}
-		m.list.Title = "Articles"
-		p := tea.NewProgram(m, tea.WithAltScreen())
-		if _, err := p.Run(); err != nil {
-			log.Fatalf("Error running program: %v", err)
+		if err := renderFunc(texts, cmd); err != nil {
+			log.Fatalf("error rendering texts: %v", err)
 		}
 	},
 }
@@ -44,21 +45,56 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(listCmd)
 
-	// TODO: parameterize the renderer, and perhaps also the sort order.
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringVarP(&output, "output", "o", string(OutputTea), fmt.Sprintf("output format for listed texts (%v)", strings.Join(rendererOptions, ", ")))
 }
 
-// tea interface for listing/filtering texts. This is a little awkward: the List
-// interface lets us pick two strings to display, but we really have 4-5.
+type outputFormat string
+
+// Output formats the user can select.
+const (
+	OutputTea      outputFormat = "tea"
+	OutputPlain    outputFormat = "plain"
+	OutputJSON     outputFormat = "json"
+	OutputJSONFeed outputFormat = "jsonfeed"
+	OutputHTML     outputFormat = "html"
+)
+
+var rendererOptions = []string{
+	string(OutputTea),
+	string(OutputPlain),
+	string(OutputJSON),
+	string(OutputJSONFeed),
+	string(OutputHTML),
+}
+
+type renderFunc func(texts []*text.Text, cmd *cobra.Command) error
+
+// cli adapter for render.Functions.
+func cli(f render.Function) renderFunc {
+	return func(texts []*text.Text, cmd *cobra.Command) error {
+		return f(texts, cmd.OutOrStdout())
+	}
+}
+
+// outputRenderers by outputFormat.
+var outputRenderers = map[outputFormat]renderFunc{
+	OutputTea:      renderTea,
+	OutputPlain:    cli(render.Plain),
+	OutputJSON:     cli(render.JSON),
+	OutputJSONFeed: cli(render.JSONFeed),
+	OutputHTML:     cli(render.HTML),
+}
+
+// renderTea renders a tea interface for listing/filtering texts. This is a
+// little awkward: the List interface lets us pick two strings to display, but
+// we really have 4-5.
+func renderTea(texts []*text.Text, cmd *cobra.Command) error {
+	m := model{list: list.New(items(texts), list.NewDefaultDelegate(), 0, 0)}
+	m.list.Title = "Articles"
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	_, err := p.Run()
+	return err
+}
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 

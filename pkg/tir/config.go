@@ -144,7 +144,7 @@ func FromConfig() (*Service, text.Editor, error) {
 	if storeFactory, ok := StoreFactories[StoreType(storeType)]; !ok {
 		return nil, nil, fmt.Errorf("invalid store type '%v'", storeType)
 	} else if s, err = storeFactory(); err != nil {
-		return nil, nil, fmt.Errorf("error generating store: %v", storeType)
+		return nil, nil, fmt.Errorf("error generating %v store: %w", storeType, err)
 	}
 
 	editor := viper.GetString(ConfigEditor)

@@ -19,7 +19,7 @@ func JSONFeed(texts []*text.Text, to io.Writer) error {
 		item.URL = text.URL
 
 		author := jsonfeed.NewAuthor()
-		author.Name = item.Author
+		author.Name = text.Author
 		item.Authors = []jsonfeed.Author{author}
 
 		item.ContentText = text.Note
