@@ -58,27 +58,13 @@ func (s *Service) Read(id string) (*text.Text, error) {
 
 // Update a text by ID and return teh resulting text.
 func (s *Service) Update(id string, updates *text.Text) (*text.Text, error) {
-	applied, err := s.Store.Read(id)
+	extant, err := s.Store.Read(id)
 	if err != nil {
 		return nil, fmt.Errorf("error reading old record: %w", err)
 	}
-
-	// Apply changes to the extant record.
-	if updates.Author != "" {
-		applied.Author = updates.Author
-	}
-	if updates.Note != "" {
-		applied.Note = updates.Note
-	}
-	if updates.Title != "" {
-		applied.Title = updates.Title
-	}
-	if updates.URL != "" {
-		applied.URL = updates.URL
-	}
-
 	// Don't validate: updates can be partial.
-	return s.Store.Upsert(applied)
+	extant.Integrate(updates)
+	return s.Store.Upsert(extant)
 }
 
 // Delete a text by ID and return the deleted text.

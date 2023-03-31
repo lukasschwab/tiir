@@ -43,3 +43,19 @@ func (t *Text) EditWith(e Editor) (final *Text, err error) {
 type Editor interface {
 	Update(initial *Text) (final *Text, err error)
 }
+
+// Integrate updates into t in-place.
+func (t *Text) Integrate(updates *Text) {
+	if updates.Author != "" {
+		t.Author = updates.Author
+	}
+	if updates.Note != "" {
+		t.Note = updates.Note
+	}
+	if updates.Title != "" {
+		t.Title = updates.Title
+	}
+	if updates.URL != "" {
+		t.URL = updates.URL
+	}
+}

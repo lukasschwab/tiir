@@ -33,3 +33,9 @@ Finally, it's an opportunity to learn new corners of Go.
 + [Fiber](https://gofiber.io/) may provide more pluggable HTTP patterns, though I'm fond of vanilla HTTP.
 + CLI utilities like the [Charm](https://github.com/charmbracelet) family.
 + [Fly.io](https://fly.io/docs/languages-and-frameworks/golang/) and/or Tailscale for hosting.
+
+## Interesting decisions
+
++ I'm gravitating towards single-method interfaces; [thanks Eli Bendersky.](https://eli.thegreenplace.net/2023/the-power-of-single-method-interfaces-in-go/)
++ I'm moving most of the `text.Text` manipulation into `text`, even if it only has a single caller. It's nice to put the pluggable types in one place. You shouldn't need `pkg/edit` to override its built-in editors.
+    + Ultimately, the cmd dependencies on `pkg/edit` may get moved to `tir`... or wherever we do the config processing.
