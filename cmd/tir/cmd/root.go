@@ -64,5 +64,5 @@ func init() {
 
 	flagEditor := "editor"
 	rootCmd.PersistentFlags().StringP(flagEditor, "e", "tea", fmt.Sprintf("editor to use (%v)", strings.Join(tir.EditorOptions, ", ")))
-	viper.BindPFlag(tir.ConfigHTTPStoreBaseURL, rootCmd.PersistentFlags().Lookup(flagEditor))
+	viper.BindPFlag(tir.ConfigEditor, rootCmd.PersistentFlags().Lookup(flagEditor))
 }

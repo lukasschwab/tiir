@@ -3,10 +3,16 @@ package store
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/lukasschwab/tiir/pkg/text"
+)
+
+var (
+	notFoundError = errors.New("not found")
 )
 
 func UseHTTP(baseURL string) Store {
@@ -28,7 +34,8 @@ func (h *httpStore) Read(id string) (*text.Text, error) {
 	result := new(text.Text)
 	if resp, err := http.Get(fmt.Sprintf("%s/texts/%s", h.baseURL, id)); err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
-		// TODO: handle "not found" status.
+	} else if resp.StatusCode == http.StatusNotFound {
+		return nil, notFoundError
 	} else if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	} else if err := result.Validate(); err != nil {
@@ -48,19 +55,24 @@ func (h *httpStore) Upsert(t *text.Text) (*text.Text, error) {
 	body := bytes.NewReader(marshaled)
 
 	var method, url string
-	if _, err := h.Read(t.ID); err != nil {
-		// The record presumably doesn't exist; create it.
-		// TODO: be more selective about the errors accepted here.
+	if _, err := h.Read(t.ID); errors.Is(err, notFoundError) {
+		// The record doesn't exist; create it.
 		method, url = http.MethodPost, fmt.Sprintf("%s/texts", h.baseURL)
+	} else if err != nil {
+		return nil, fmt.Errorf("unexpected error: %w", err)
 	} else {
 		// It exists; update it.
 		method, url = http.MethodPatch, fmt.Sprintf("%s/texts/%s", h.baseURL, t.ID)
 	}
 
 	result := new(text.Text)
-	if req, err := http.NewRequest(method, url, body); err != nil {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
-	} else if resp, err := http.DefaultClient.Do(req); err != nil {
+	}
+	req.Header.Add(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+	if resp, err := http.DefaultClient.Do(req); err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	} else if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)

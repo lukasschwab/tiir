@@ -66,7 +66,11 @@ func main() {
 
 		t, err := configuredService.Read(id)
 		if err != nil {
-			return fmt.Errorf("error getting record: %w", err)
+			// BODGE: assume the text wasn't found. Makes upsert-adaptation in
+			// store.http easier.
+			log.Printf("error getting record: %v", err)
+			c.SendStatus(fiber.StatusNotFound)
+			return nil
 		}
 		return c.Status(fiber.StatusOK).JSON(t)
 	})
