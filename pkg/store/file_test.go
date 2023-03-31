@@ -9,6 +9,8 @@ import (
 )
 
 func TestUseFile(t *testing.T) {
+	assert.Implements(t, (*Store)(nil), &File{})
+
 	f, err := os.CreateTemp(t.TempDir(), "*.json")
 	assert.NoError(t, err)
 	assert.NoError(t, f.Close())

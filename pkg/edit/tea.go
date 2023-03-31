@@ -80,9 +80,6 @@ func (m model) canSubmit() bool {
 
 // commit the edited state to the model result.
 func (m model) commit() {
-	// TODO: handle validation.
-	// TODO; display an error text if this returns an error. Check out the old
-	// cursor mode pattern for an example.
 	*m.result = *m.toText()
 }
 
@@ -120,7 +117,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Did the user press enter while the submit button was focused?
 			if s == "enter" && m.focusIndex == len(m.inputs) {
-				// TODO: validation before "allowing" submission.
 				m.commit()
 				return m, tea.Quit
 			}

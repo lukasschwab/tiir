@@ -16,7 +16,6 @@ var (
 	JSONFeed          = jsonFeed{}
 )
 
-// TODO: interface should support ordering, limit parameters.
 type Renderer interface {
 	Render(texts []*text.Text, to io.Writer) error
 }

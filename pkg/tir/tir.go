@@ -12,7 +12,6 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-// TODO: receive something implementing store.Store.
 func New(s store.Store) *Service {
 	return &Service{Store: s}
 }

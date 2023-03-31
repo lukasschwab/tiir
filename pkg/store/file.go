@@ -9,7 +9,6 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-// TODO: provide a constructor?
 func UseFile(path string) (*File, error) {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
