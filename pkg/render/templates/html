@@ -56,12 +56,15 @@
         <th>Note</th>
         <th>Date</th>
     </tr>
-    {{range .}}
-    <tr>
-        <td><a href="{{.URL}}">{{.Title}}</a></td>
-        <td>{{.Author}}</td>
-        <td>{{.Note}}</td>
-        <td>{{printf "%d&#8209;%d&#8209;%d" (.Timestamp.Year) (.Timestamp.Month) (.Timestamp.Day)}}</td>
-    </tr>
-    {{end}}
+    {{ range . }}
+        <td colspan="4"><h3>{{ .Key }}</h3></td>
+        {{range .Texts}}
+            <tr>
+                <td><a href="{{.URL}}">{{.Title}}</a></td>
+                <td>{{.Author}}</td>
+                <td>{{.Note}}</td>
+                <td>{{printf "%d&#8209;%d&#8209;%d" (.Timestamp.Year) (.Timestamp.Month) (.Timestamp.Day)}}</td>
+            </tr>
+        {{end}}
+    {{ end }}
 </table>
