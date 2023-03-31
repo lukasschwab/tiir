@@ -9,12 +9,12 @@ import (
 )
 
 type Text struct {
-	Title     string
-	URL       string
-	Author    string
-	Note      string
-	ID        string
-	Timestamp time.Time
+	Title     string    `json:"title"`
+	URL       string    `json:"url"`
+	Author    string    `json:"author"`
+	Note      string    `json:"note"`
+	ID        string    `json:"id"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // Validate t is a sufficient text: user has provided all required fields.
