@@ -7,7 +7,16 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-func UseMemory(initialTexts ...*text.Text) *memory {
+// UseMemory constructs a new in-memory store containing initialTexts.
+//
+// Because it doesn't persist texts after the program terminates, memory stores
+// are best suited for testing and for intermediate formats used by other
+// Stores.
+func UseMemory(initialTexts ...*text.Text) Store {
+	return useMemory(initialTexts...)
+}
+
+func useMemory(initialTexts ...*text.Text) *memory {
 	m := &memory{
 		texts: make(map[string]*text.Text),
 	}
@@ -17,11 +26,13 @@ func UseMemory(initialTexts ...*text.Text) *memory {
 	return m
 }
 
+// memory implementation of Store.
 type memory struct {
 	sync.RWMutex
 	texts map[string]*text.Text
 }
 
+// Read implements Store.
 func (m *memory) Read(id string) (*text.Text, error) {
 	m.RLock()
 	defer m.RUnlock()
@@ -33,6 +44,7 @@ func (m *memory) Read(id string) (*text.Text, error) {
 	return text, nil
 }
 
+// Upsert implements Store.
 func (m *memory) Upsert(t *text.Text) (*text.Text, error) {
 	m.Lock()
 	defer m.Unlock()
@@ -41,6 +53,7 @@ func (m *memory) Upsert(t *text.Text) (*text.Text, error) {
 	return t, nil
 }
 
+// Delete implements Store.
 func (m *memory) Delete(id string) (*text.Text, error) {
 	m.Lock()
 	defer m.Unlock()
@@ -54,15 +67,18 @@ func (m *memory) Delete(id string) (*text.Text, error) {
 	return text, nil
 }
 
-func (m *memory) List(order text.Order) ([]*text.Text, error) {
+// List implements Store.
+func (m *memory) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
 	texts := make([]*text.Text, 0, len(m.texts))
 	for _, t := range m.texts {
 		texts = append(texts, t)
 	}
-	text.Sort(texts, order)
+
+	text.Sort(texts).By(c, d)
 	return texts, nil
 }
 
+// Close implements Store.
 func (m *memory) Close() error {
 	return nil
 }

@@ -9,27 +9,40 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-func UseFile(path string) (*File, error) {
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
+// UseFile uses the file at path as a JSON store. If the file doesn't exist,
+// it's created and initialized to an empty store.
+//
+// If you don't call (*File).Close, the underlying [os.File] won't be closed.
+func UseFile(path string) (Store, error) {
+	return useFile(path)
+}
+
+func useFile(path string) (*file, error) {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %w", err)
 	}
 
-	f := &File{File: file}
-	if i, err := f.parse(); err != nil {
+	fStore := &file{f}
+	if i, err := fStore.parse(); err != nil {
 		return nil, fmt.Errorf("can't parse file contents: %w", err)
-	} else if err := f.commit(i); err != nil {
+	} else if err := fStore.commit(i); err != nil {
 		return nil, fmt.Errorf("can't write to file: %w", err)
 	}
-	return f, nil
+	return fStore, nil
 }
 
-// File driven implementation of Store.
-type File struct {
+// file implementation of Store.
+//
+// Loads all texts from the underlying os.File into a memory store as an
+// intermediate form for each operation; most of the store logic is delegated to
+// the memory implementation.
+type file struct {
 	*os.File
 }
 
-func (f *File) parse() (*memory, error) {
+// parse all records in f into memory.
+func (f *file) parse() (*memory, error) {
 	result := new(map[string]*text.Text)
 	if _, err := f.Seek(0, 0); err != nil {
 		return nil, fmt.Errorf("couldn't seek to beginning of file before parsing: %v", err)
@@ -37,14 +50,15 @@ func (f *File) parse() (*memory, error) {
 		return nil, fmt.Errorf("couldn't read file: %w", err)
 	} else if err := json.Unmarshal(bytes, result); err != nil {
 		if len(bytes) == 0 {
-			return UseMemory(), nil
+			return useMemory(), nil
 		}
 		return nil, fmt.Errorf("couldn't parse file JSON: %w", err)
 	}
 	return &memory{texts: *result}, nil
 }
 
-func (f *File) commit(new *memory) error {
+// commit all records in memory to the underlying file. Overwrites everything.
+func (f *file) commit(new *memory) error {
 	if newContents, err := json.MarshalIndent(new.texts, "", "\t"); err != nil {
 		return fmt.Errorf("couldn't marshal texts to JSON: %w", err)
 	} else if err := f.Truncate(0); err != nil {
@@ -57,7 +71,8 @@ func (f *File) commit(new *memory) error {
 	return nil
 }
 
-func (f *File) Read(id string) (*text.Text, error) {
+// Read implements Store.
+func (f *file) Read(id string) (*text.Text, error) {
 	m, err := f.parse()
 	if err != nil {
 		return nil, err
@@ -66,7 +81,8 @@ func (f *File) Read(id string) (*text.Text, error) {
 	return m.Read(id)
 }
 
-func (f *File) Upsert(t *text.Text) (*text.Text, error) {
+// Upsert implements Store.
+func (f *file) Upsert(t *text.Text) (*text.Text, error) {
 	m, err := f.parse()
 	if err != nil {
 		return nil, err
@@ -81,7 +97,8 @@ func (f *File) Upsert(t *text.Text) (*text.Text, error) {
 	return t, nil
 }
 
-func (f *File) Delete(id string) (*text.Text, error) {
+// Delete implements Store.
+func (f *file) Delete(id string) (*text.Text, error) {
 	m, err := f.parse()
 	if err != nil {
 		return nil, err
@@ -96,15 +113,17 @@ func (f *File) Delete(id string) (*text.Text, error) {
 	return t, nil
 }
 
-func (f *File) List(order text.Order) ([]*text.Text, error) {
+// List implements Store.
+func (f *file) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
 	m, err := f.parse()
 	if err != nil {
 		return nil, err
 	}
 
-	return m.List(order)
+	return m.List(c, d)
 }
 
-func (f *File) Close() error {
+// Close implements Store.
+func (f *file) Close() error {
 	return f.File.Close()
 }

@@ -1,10 +1,16 @@
 package store
 
 import (
+	"io"
+
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
+// Store texts somewhere. An initialized store must be closed: call or defer
+// (Store).Close.
 type Store interface {
+	// Close closes the Store, rendering it unusable for future operations.
+	io.Closer
 	// Read a text by ID.
 	Read(id string) (*text.Text, error)
 	// Delete a text by ID and return the deleted text.
@@ -13,7 +19,5 @@ type Store interface {
 	// and t is valid; see (*text.Text).Validate(...).
 	Upsert(t *text.Text) (*text.Text, error)
 	// List all texts in the store in order.
-	List(order text.Order) ([]*text.Text, error)
-	// Close implements io.Closer.
-	Close() error
+	List(c text.Comparator, d text.Direction) ([]*text.Text, error)
 }
