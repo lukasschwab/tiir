@@ -7,10 +7,14 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-func NewMemory() Store {
-	return &memory{
+func NewMemory(initialTexts ...*text.Text) Store {
+	m := &memory{
 		texts: make(map[string]*text.Text),
 	}
+	for _, t := range initialTexts {
+		m.Create(t)
+	}
+	return m
 }
 
 // NOTE: a lot of our interaction is timestamp-based. Should this be an ordered
