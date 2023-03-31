@@ -18,15 +18,15 @@ func TestOpenOrCreateFile(t *testing.T) {
 
 	inner, err := file.parse()
 	assert.NoError(t, err)
-	assert.Empty(t, inner)
+	assert.Empty(t, inner.texts)
 
-	assert.NoError(t, file.commit(map[string]*text.Text{
-		"abc123de": {ID: "abc123de"},
-	}))
+	m := NewMemory(&text.Text{ID: "abc123de"})
+
+	assert.NoError(t, file.commit(m))
 
 	inner, err = file.parse()
 	assert.NoError(t, err)
-	assert.Contains(t, inner, "abc123de")
+	assert.Contains(t, inner.texts, "abc123de")
 
 	assert.NoError(t, file.Close())
 
@@ -36,5 +36,5 @@ func TestOpenOrCreateFile(t *testing.T) {
 
 	inner, err = file.parse()
 	assert.NoError(t, err)
-	assert.Contains(t, inner, "abc123de", "records should persist when file is closed")
+	assert.Contains(t, inner.texts, "abc123de", "records should persist when file is closed")
 }

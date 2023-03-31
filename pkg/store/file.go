@@ -30,25 +30,23 @@ type File struct {
 	*os.File
 }
 
-type inner map[string]*text.Text
-
-func (f *File) parse() (inner, error) {
-	result := new(inner)
+func (f *File) parse() (*memory, error) {
+	result := new(map[string]*text.Text)
 	if _, err := f.Seek(0, 0); err != nil {
 		return nil, fmt.Errorf("couldn't seek to beginning of file before parsing: %v", err)
 	} else if bytes, err := io.ReadAll(f.File); err != nil {
 		return nil, fmt.Errorf("couldn't read file: %w", err)
 	} else if err := json.Unmarshal(bytes, result); err != nil {
 		if len(bytes) == 0 {
-			return map[string]*text.Text{}, nil
+			return emptyMemory(), nil
 		}
 		return nil, fmt.Errorf("couldn't parse file JSON: %w", err)
 	}
-	return *result, nil
+	return &memory{texts: *result}, nil
 }
 
-func (f *File) commit(new inner) error {
-	if newContents, err := json.MarshalIndent(new, "", "\t"); err != nil {
+func (f *File) commit(new *memory) error {
+	if newContents, err := json.MarshalIndent(new.texts, "", "\t"); err != nil {
 		return fmt.Errorf("couldn't marshal texts to JSON: %w", err)
 	} else if err := f.Truncate(0); err != nil {
 		return fmt.Errorf("couldn't clear file before writing: %v", err)
@@ -60,77 +58,52 @@ func (f *File) commit(new inner) error {
 	return nil
 }
 
-func (f *File) Create(t *text.Text) (*text.Text, error) {
-	texts, err := f.parse()
-	if err != nil {
-		return nil, err
-	}
-
-	texts[t.ID] = t
-
-	if err := f.commit(texts); err != nil {
-		return nil, err
-	}
-	return t, nil
-}
-
 func (f *File) Read(id string) (*text.Text, error) {
-	texts, err := f.parse()
+	m, err := f.parse()
 	if err != nil {
 		return nil, err
 	}
 
-	text, ok := texts[id]
-	if !ok {
-		return nil, fmt.Errorf("no text with ID '%v'", id)
-	}
-	return text, nil
+	return m.Read(id)
 }
 
 func (f *File) Upsert(t *text.Text) (*text.Text, error) {
-	texts, err := f.parse()
+	m, err := f.parse()
 	if err != nil {
 		return nil, err
 	}
 
-	texts[t.ID] = t
+	if t, err = m.Upsert(t); err != nil {
+		return nil, err
+	} else if err := f.commit(m); err != nil {
+		return nil, err
+	}
 
-	if err := f.commit(texts); err != nil {
+	return t, nil
+}
+
+func (f *File) Delete(id string) (*text.Text, error) {
+	m, err := f.parse()
+	if err != nil {
+		return nil, err
+	}
+
+	t, err := m.Delete(id)
+	if err != nil {
+		return nil, err
+	} else if err := f.commit(m); err != nil {
 		return nil, err
 	}
 	return t, nil
 }
 
-func (f *File) Update(id string, new *text.Text) (*text.Text, error) {
-	texts, err := f.parse()
+func (f *File) List(order text.Order) ([]*text.Text, error) {
+	m, err := f.parse()
 	if err != nil {
 		return nil, err
 	}
 
-	texts[id] = new
-
-	if err := f.commit(texts); err != nil {
-		return nil, err
-	}
-	return new, nil
-}
-
-func (f *File) Delete(id string) (*text.Text, error) {
-	texts, err := f.parse()
-	if err != nil {
-		return nil, err
-	}
-
-	text, ok := texts[id]
-	if !ok {
-		return nil, fmt.Errorf("no text with ID '%v'", id)
-	}
-
-	delete(texts, id)
-	if err := f.commit(texts); err != nil {
-		return nil, err
-	}
-	return text, nil
+	return m.List(order)
 }
 
 func (f *File) Close() error {

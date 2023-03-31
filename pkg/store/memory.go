@@ -7,12 +7,16 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-func NewMemory(initialTexts ...*text.Text) Store {
-	m := &memory{
+func emptyMemory() *memory {
+	return &memory{
 		texts: make(map[string]*text.Text),
 	}
+}
+
+func NewMemory(initialTexts ...*text.Text) *memory {
+	m := emptyMemory()
 	for _, t := range initialTexts {
-		m.Create(t)
+		m.Upsert(t)
 	}
 	return m
 }
@@ -79,6 +83,15 @@ func (m *memory) Delete(id string) (*text.Text, error) {
 
 	delete(m.texts, id)
 	return text, nil
+}
+
+func (m *memory) List(order text.Order) ([]*text.Text, error) {
+	texts := make([]*text.Text, 0, len(m.texts))
+	for _, t := range m.texts {
+		texts = append(texts, t)
+	}
+	text.Sort(texts, order)
+	return texts, nil
 }
 
 func (m *memory) Close() error {

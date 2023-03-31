@@ -16,6 +16,8 @@ type Store interface {
 	Upsert(t *text.Text) (*text.Text, error)
 	// TODO: introduce an ordered List function for supporting templates.
 
+	List(order text.Order) ([]*text.Text, error)
+
 	// Close implements io.Closer.
 	Close() error
 }

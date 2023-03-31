@@ -4,6 +4,7 @@ package text
 
 import (
 	"errors"
+	"sort"
 	"time"
 )
 
@@ -30,4 +31,58 @@ func (t *Text) Validate() error {
 	default:
 		return nil
 	}
+}
+
+type comparator func(t1, t2 *Text) bool
+
+type direction int
+
+// You can sort texts by a comparator ascending or descending.
+const (
+	Ascending direction = iota
+	Descending
+)
+
+type Order struct {
+	Compare   comparator
+	Direction direction
+}
+
+// Sort texts in-place in the specified order.
+func Sort(texts []*Text, o Order) {
+	sort.Sort(&textSorter{
+		compare:   o.Compare,
+		direction: o.Direction,
+		texts:     texts,
+	})
+}
+
+// textSorter implements sort.Interface for texts.
+type textSorter struct {
+	compare   comparator
+	direction direction
+	texts     []*Text
+}
+
+// Let implements sort.Interface.
+func (ts *textSorter) Len() int {
+	return len(ts.texts)
+}
+
+// Swap implements sort.Interface.
+func (ts *textSorter) Swap(i, j int) {
+	ts.texts[i], ts.texts[j] = ts.texts[j], ts.texts[i]
+}
+
+// Less implements sort.interface.
+func (ts *textSorter) Less(i, j int) bool {
+	if ts.direction == Ascending {
+		return ts.compare(ts.texts[i], ts.texts[j])
+	}
+	return ts.compare(ts.texts[j], ts.texts[i])
+}
+
+// Timestamp is a
+func Timestamps(t1, t2 *Text) bool {
+	return t1.Timestamp.Before(t2.Timestamp)
 }
