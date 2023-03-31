@@ -9,9 +9,7 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-type jsonFeed struct{}
-
-func (j jsonFeed) Render(texts []*text.Text, to io.Writer) error {
+func JSONFeed(texts []*text.Text, to io.Writer) error {
 	items := make([]jsonfeed.Item, len(texts))
 	for i, text := range texts {
 		item := jsonfeed.NewItem(text.ID)

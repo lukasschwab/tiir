@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -16,11 +17,12 @@ import (
 )
 
 var (
-	listRenderer = map[string]render.Renderer{
+	listRenderer = map[string]render.Function{
 		"json":             render.JSONFeed,
 		"application/json": render.JSONFeed,
 		"plain":            render.Plain,
 		"text/plain":       render.Plain,
+		"html":             render.HTML,
 	}
 )
 
@@ -32,6 +34,8 @@ func main() {
 
 	// Inbound logging.
 	app.Use(logger.New())
+
+	// TODO: think about simple auth.
 
 	// Create text.
 	app.Post("/texts", func(c *fiber.Ctx) error {
@@ -87,10 +91,9 @@ func main() {
 	app.Get("/texts", func(c *fiber.Ctx) error {
 		// FIXME: handle errors.
 		texts, _ := configuredService.List()
-
-		renderer := listRenderer[c.Query("format", "plain")]
-		renderer.Render(texts, c)
-		return nil
+		renderer := listRenderer[c.Query("format", "html")]
+		c.Set("Content-Type", "text/html; charset=utf-8")
+		return renderer(texts, c)
 	})
 
 	go func() {
@@ -104,7 +107,7 @@ func main() {
 
 	<-c // Block main thread until interrupt.
 	log.Printf("Gracefully shutting down...")
-	_ = app.Shutdown()
+	_ = app.ShutdownWithTimeout(5 * time.Second)
 	if err := configuredService.Close(); err != nil {
 		log.Printf("Error closing service: %v", err)
 	}

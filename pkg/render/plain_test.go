@@ -24,7 +24,7 @@ func TestRenderPlainText(t *testing.T) {
 	}
 
 	var rendered strings.Builder
-	err := Plain.Render(texts, &rendered)
+	err := Plain(texts, &rendered)
 	assert.NoError(t, err)
 
 	assert.NotZero(t, rendered.Len())

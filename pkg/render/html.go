@@ -3,17 +3,17 @@ package render
 import (
 	_ "embed"
 	"fmt"
+	"html/template"
 	"io"
-	"text/template"
 
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-//go:embed templates/plain
-var plainTextTemplate string
+//go:embed templates/html
+var htmlTemplate string
 
-func Plain(texts []*text.Text, to io.Writer) error {
-	tmpl, err := template.New("plain").Parse(plainTextTemplate)
+func HTML(texts []*text.Text, to io.Writer) error {
+	tmpl, err := template.New("html").Parse(htmlTemplate)
 	if err != nil {
 		return fmt.Errorf("error parsing template: %w", err)
 	}

@@ -1,0 +1,67 @@
+<head>
+	<title="tir">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <style>
+        html {
+            width: 1000px;
+            margin: auto;
+            max-width: 80%;
+        }
+
+        body {
+            margin-top: 140px;
+            margin-bottom: 140px;
+        }
+
+        .title {
+            font-size: 70px; 
+            text-decoration: bold; 
+            color: #0074D9;
+            text-align: center;
+        }
+
+        h3 {
+            margin-top: 0px;
+            margin-bottom: 0px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        p {
+            text-align: center;
+        }
+
+        /* HORIZONTAL RULE BLOCK */
+        hr {
+            height: 2px;
+            background-color: #0074D9;
+            border: none;
+            width: 50%;
+            margin-top: 50px;
+            margin-bottom: 50px;
+        }
+    </style>
+</head>
+
+<h1 class="title">tir</h1>
+<p><a href="https://github.com/lukasschwab/tir">GitHub</a><!-- &middot; <a href="https://lukasschwab.github.io/tir.xml">RSS</a> --></p>
+
+<hr/>
+
+<!-- TODO: bucket entries by day before rendering. -->
+<table class="table">
+    <tr>
+        <th>Title</th>
+        <th>Author</th>
+        <th>Note</th>
+        <th>Date</th>
+    </tr>
+    {{range .}}
+    <tr>
+        <td><a href="{{.URL}}">{{.Title}}</a></td>
+        <td>{{.Author}}</td>
+        <td>{{.Note}}</td>
+        <td>{{printf "%d&#8209;%d&#8209;%d" (.Timestamp.Year) (.Timestamp.Month) (.Timestamp.Day)}}</td>
+    </tr>
+    {{end}}
+</table>
