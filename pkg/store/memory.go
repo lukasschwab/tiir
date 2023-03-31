@@ -52,23 +52,12 @@ func (m *memory) Update(id string, new *text.Text) (*text.Text, error) {
 	m.Lock()
 	defer m.Unlock()
 
-	updated, ok := m.texts[id]
-	if !ok {
-		return nil, fmt.Errorf("no text with ID '%v'", new.ID)
+	if _, ok := m.texts[id]; !ok {
+		return nil, fmt.Errorf("no text with ID '%v'", id)
 	}
 
-	if new.Author != "" {
-		updated.Author = new.Author
-	}
-	if new.Note != "" {
-		updated.Note = new.Note
-	}
-	if new.URL != "" {
-		updated.URL = new.URL
-	}
-
-	m.texts[id] = updated
-	return updated, nil
+	m.texts[id] = new
+	return new, nil
 }
 
 func (m *memory) Delete(id string) (*text.Text, error) {

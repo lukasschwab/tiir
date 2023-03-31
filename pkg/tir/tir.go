@@ -1,3 +1,4 @@
+// package tir provides the interface-facing CRUD service.
 package tir
 
 import (
@@ -35,11 +36,28 @@ func (s *Service) Read(id string) (*text.Text, error) {
 	return s.Store.Read(id)
 }
 
-func (s *Service) Update(id string, new *text.Text) (*text.Text, error) {
-	// Prevent confusion.
-	new.ID = id
+func (s *Service) Update(id string, updates *text.Text) (*text.Text, error) {
+	applied, err := s.Store.Read(id)
+	if err != nil {
+		return nil, fmt.Errorf("error reading old record: %w", err)
+	}
+
+	// Apply changes to the extant record.
+	if updates.Author != "" {
+		applied.Author = updates.Author
+	}
+	if updates.Note != "" {
+		applied.Note = updates.Note
+	}
+	if updates.Title != "" {
+		applied.Title = updates.Title
+	}
+	if updates.URL != "" {
+		applied.URL = updates.URL
+	}
+
 	// Don't validate: updates can be partial.
-	return s.Store.Update(id, new)
+	return s.Store.Update(id, applied)
 }
 
 func (s *Service) Delete(id string) (*text.Text, error) {
