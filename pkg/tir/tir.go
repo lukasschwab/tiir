@@ -6,11 +6,23 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"time"
 
 	"github.com/lukasschwab/tiir/pkg/store"
 	"github.com/lukasschwab/tiir/pkg/text"
 )
+
+func FromConfig() (*Service, error) {
+	// TODO: actually use a config!
+	if home, err := os.UserHomeDir(); err != nil {
+		return nil, fmt.Errorf("error getting user home directory: %v", err)
+	} else if store, err := store.UseFile(home + "/.tir.json"); err != nil {
+		return nil, fmt.Errorf("error opening tir file: %v", err)
+	} else {
+		return &Service{Store: store}, nil
+	}
+}
 
 func New(s store.Store) *Service {
 	return &Service{Store: s}

@@ -6,9 +6,14 @@ import (
 	"os"
 
 	"github.com/lukasschwab/tiir/pkg/edit"
-	"github.com/lukasschwab/tiir/pkg/store"
 	"github.com/lukasschwab/tiir/pkg/tir"
 	"github.com/spf13/cobra"
+)
+
+// Config properties initialized and closed by rootCmd pre- and post-run funcs.
+var (
+	configuredService *tir.Service
+	configuredEditor  edit.Editor
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -20,15 +25,7 @@ var rootCmd = &cobra.Command{
 		if !verbose {
 			log.SetOutput(io.Discard)
 		}
-
-		if home, err := os.UserHomeDir(); err != nil {
-			log.Fatalf("error getting user home directory: %v", err)
-		} else if store, err := store.UseFile(home + "/.tir.json"); err != nil {
-			log.Fatalf("error opening tir file: %v", err)
-		} else {
-			configuredService = &tir.Service{Store: store}
-		}
-
+		configuredService, _ = tir.FromConfig()
 		configuredEditor = edit.Tea{}
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
