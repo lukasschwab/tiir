@@ -6,26 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"time"
 
 	"github.com/lukasschwab/tiir/pkg/store"
 	"github.com/lukasschwab/tiir/pkg/text"
 )
-
-// FromConfig loads a tir.Service from defaults, overridden by user-provided
-// configuration.
-//
-// TODO: actually use a config!
-func FromConfig() (*Service, error) {
-	if home, err := os.UserHomeDir(); err != nil {
-		return nil, fmt.Errorf("error getting user home directory: %v", err)
-	} else if store, err := store.UseFile(home + "/.tir.json"); err != nil {
-		return nil, fmt.Errorf("error opening tir file: %v", err)
-	} else {
-		return &Service{Store: store}, nil
-	}
-}
 
 // New constructs a new Service around s.
 func New(s store.Store) *Service {
@@ -56,7 +41,7 @@ func (s *Service) Read(id string) (*text.Text, error) {
 	return s.Store.Read(id)
 }
 
-// Update a text by ID and return teh resulting text.
+// Update a text by ID and return the resulting text.
 func (s *Service) Update(id string, updates *text.Text) (*text.Text, error) {
 	extant, err := s.Store.Read(id)
 	if err != nil {

@@ -1,11 +1,11 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
 
-	"github.com/lukasschwab/tiir/pkg/edit"
 	"github.com/lukasschwab/tiir/pkg/text"
 	"github.com/lukasschwab/tiir/pkg/tir"
 	"github.com/spf13/cobra"
@@ -22,12 +22,14 @@ var rootCmd = &cobra.Command{
 	Use:   "tir",
 	Short: "Log what you read",
 	Long:  `tir ('Today I Read...') is a tool for logging the articles you read.`,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		if !verbose {
 			log.SetOutput(io.Discard)
 		}
-		configuredService, _ = tir.FromConfig()
-		configuredEditor = edit.Tea
+		if configuredService, configuredEditor, err = tir.FromConfig(); err != nil {
+			return fmt.Errorf("error loading config: %w", err)
+		}
+		return nil
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 		return configuredService.Close()

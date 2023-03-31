@@ -50,3 +50,7 @@ Finally, it's an opportunity to learn new corners of Go.
 + File as database is insipired by Tailscale... but I could probably optimize it for long-running server use.
 
 One nice thing about interfaces: defining them early lets you implement things out-of-order. You can write pkg/tir *assuming* something will implement pkg/store. Don't get it quite right? Tweak it later.
+
+To get current tir behavior... I can use this locally and just throw my .tir.json file someplace it'll be backed up by some other daemon (i.e. ~/Documents)! But I have to figure out my publish flow if I want a public site.
+
+For a read-only public site, can either run the fly.io server with a flag *or* I can build static assets and deploy them to e.g. GitHub Pages. Or I have to figure out fly.io authentication.

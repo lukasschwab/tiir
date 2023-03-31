@@ -18,18 +18,23 @@ import (
 
 var (
 	listRenderer = map[string]render.Function{
-		"json":             render.JSONFeed,
-		"application/json": render.JSONFeed,
-		"plain":            render.Plain,
-		"text/plain":       render.Plain,
-		"html":             render.HTML,
+		"json":                  render.JSON,
+		"application/json":      render.JSON,
+		"application/feed+json": render.JSONFeed,
+		"plain":                 render.Plain,
+		"text/plain":            render.Plain,
+		"html":                  render.HTML,
 	}
 )
 
 func main() {
 	app := fiber.New()
 
-	configuredService, _ := tir.FromConfig()
+	configuredService, _, err := tir.FromConfig()
+	if err != nil {
+		log.Fatalf("error loading config: %v", err)
+	}
+
 	defer configuredService.Close()
 
 	// Inbound logging.
@@ -50,6 +55,20 @@ func main() {
 			return fmt.Errorf("error writing record: %w", err)
 		}
 		return c.Status(fiber.StatusCreated).JSON(created)
+	})
+
+	app.Get("/texts/:id", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		if id == "" {
+			c.Status(fiber.StatusBadRequest)
+			return errors.New("update request must specify record ID")
+		}
+
+		t, err := configuredService.Read(id)
+		if err != nil {
+			return fmt.Errorf("error getting record: %w", err)
+		}
+		return c.Status(fiber.StatusOK).JSON(t)
 	})
 
 	// Update text by ID.
@@ -92,6 +111,7 @@ func main() {
 	app.Get("/texts", func(c *fiber.Ctx) error {
 		// FIXME: handle errors.
 		texts, _ := configuredService.List()
+		// TODO: look at accept headers.
 		renderer := listRenderer[c.Query("format", "html")]
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return renderer(texts, c)
