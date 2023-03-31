@@ -10,7 +10,7 @@ import (
 )
 
 // TODO: provide a constructor?
-func OpenOrCreateFile(path string) (*File, error) {
+func UseFile(path string) (*File, error) {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %w", err)
@@ -38,7 +38,7 @@ func (f *File) parse() (*memory, error) {
 		return nil, fmt.Errorf("couldn't read file: %w", err)
 	} else if err := json.Unmarshal(bytes, result); err != nil {
 		if len(bytes) == 0 {
-			return emptyMemory(), nil
+			return UseMemory(), nil
 		}
 		return nil, fmt.Errorf("couldn't parse file JSON: %w", err)
 	}

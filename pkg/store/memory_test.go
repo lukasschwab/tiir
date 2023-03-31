@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewMemory(t *testing.T) {
-	m := NewMemory()
+	m := UseMemory()
 	someText := &text.Text{ID: "some-id"}
 	created, err := m.Upsert(someText)
 	assert.NoError(t, err, "stores don't do validation")

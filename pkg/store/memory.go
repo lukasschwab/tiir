@@ -7,38 +7,19 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-func emptyMemory() *memory {
-	return &memory{
+func UseMemory(initialTexts ...*text.Text) *memory {
+	m := &memory{
 		texts: make(map[string]*text.Text),
 	}
-}
-
-func NewMemory(initialTexts ...*text.Text) *memory {
-	m := emptyMemory()
 	for _, t := range initialTexts {
 		m.Upsert(t)
 	}
 	return m
 }
 
-// NOTE: a lot of our interaction is timestamp-based. Should this be an ordered
-// structure instead of an ID-indexed one? Probably! Eliminates sort before
-// templating.
 type memory struct {
 	sync.RWMutex
 	texts map[string]*text.Text
-}
-
-func (m *memory) Create(t *text.Text) (*text.Text, error) {
-	m.Lock()
-	defer m.Unlock()
-
-	if _, ok := m.texts[t.ID]; ok {
-		return nil, fmt.Errorf("ID '%v' already exists", t.ID)
-	}
-
-	m.texts[t.ID] = t
-	return t, nil
 }
 
 func (m *memory) Read(id string) (*text.Text, error) {
@@ -58,18 +39,6 @@ func (m *memory) Upsert(t *text.Text) (*text.Text, error) {
 
 	m.texts[t.ID] = t
 	return t, nil
-}
-
-func (m *memory) Update(id string, new *text.Text) (*text.Text, error) {
-	m.Lock()
-	defer m.Unlock()
-
-	if _, ok := m.texts[id]; !ok {
-		return nil, fmt.Errorf("no text with ID '%v'", id)
-	}
-
-	m.texts[id] = new
-	return new, nil
 }
 
 func (m *memory) Delete(id string) (*text.Text, error) {

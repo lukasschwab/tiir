@@ -29,7 +29,7 @@ var rootCmd = &cobra.Command{
 		// }
 		if home, err := os.UserHomeDir(); err != nil {
 			log.Fatalf("error getting user home directory: %v", err)
-		} else if store, err := store.OpenOrCreateFile(home + "/.tir.json"); err != nil {
+		} else if store, err := store.UseFile(home + "/.tir.json"); err != nil {
 			log.Fatalf("error opening tir file: %v", err)
 		} else {
 			configuredService = &tir.Service{Store: store}

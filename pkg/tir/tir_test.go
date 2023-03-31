@@ -9,7 +9,7 @@ import (
 )
 
 func TestService(t *testing.T) {
-	s := New(store.NewMemory())
+	s := New(store.UseMemory())
 
 	original := &text.Text{Author: "a", Note: "n", URL: "u", Title: "t"}
 
@@ -41,7 +41,7 @@ func TestService(t *testing.T) {
 }
 
 func TestValidation(t *testing.T) {
-	s := New(store.NewMemory())
+	s := New(store.UseMemory())
 
 	created, err := s.Create(&text.Text{})
 	assert.Error(t, err)

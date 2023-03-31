@@ -13,7 +13,7 @@ func main() {
 	// TODO: parse command line arguments. This might be easier if we factor the
 	// editor interface out from the data process.
 	// TODO: actually persist results.
-	service := tir.Service{Store: store.NewMemory()}
+	service := tir.Service{Store: store.UseMemory()}
 
 	// Creating a new record.
 	initial := &text.Text{Title: "Your initial title here"}

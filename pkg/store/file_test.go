@@ -8,19 +8,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestOpenOrCreateFile(t *testing.T) {
+func TestUseFile(t *testing.T) {
 	f, err := os.CreateTemp(t.TempDir(), "*.json")
 	assert.NoError(t, err)
 	assert.NoError(t, f.Close())
 
-	file, err := OpenOrCreateFile(f.Name())
+	file, err := UseFile(f.Name())
 	assert.NoError(t, err)
 
 	inner, err := file.parse()
 	assert.NoError(t, err)
 	assert.Empty(t, inner.texts)
 
-	m := NewMemory(&text.Text{ID: "abc123de"})
+	m := UseMemory(&text.Text{ID: "abc123de"})
 
 	assert.NoError(t, file.commit(m))
 
@@ -30,7 +30,7 @@ func TestOpenOrCreateFile(t *testing.T) {
 
 	assert.NoError(t, file.Close())
 
-	file, err = OpenOrCreateFile(f.Name())
+	file, err = UseFile(f.Name())
 	assert.NoError(t, err, "can reopen previously-opened file")
 	defer file.Close()
 
