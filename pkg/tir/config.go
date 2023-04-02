@@ -20,7 +20,7 @@ import (
 		"path": "~/.tir.json"
 	},
 	"store": {
-		"type": "file",
+		"type": "http",
 		"base_url": "tir.fly.io",
 	},
 	"store": {
@@ -44,6 +44,10 @@ const (
 
 	// ConfigHTTPStoreBaseURL must be defined for HTTP stores.
 	ConfigHTTPStoreBaseURL = ConfigStore + ".base_url"
+	// ConfigHTTPStoreAPISecret defines an API secret to authorize requests to
+	// the tir server at base_url. This is an optional config variable, but a
+	// server that requires it will reject requests.
+	ConfigHTTPStoreAPISecret = ConfigStore + ".api_secret"
 
 	// ConfigEditor is the top-level key for CLI editor configuration.
 	ConfigEditor = "editor"
@@ -81,7 +85,12 @@ var StoreFactories = map[StoreType]func() (store.Store, error){
 			return nil, errors.New("must provide base URL for HTTP store")
 		}
 		log.Printf("Using HTTP store: %v", baseURL)
-		return store.UseHTTP(baseURL), nil
+
+		apiSecret := viper.GetString(ConfigHTTPStoreAPISecret)
+		if apiSecret == "" {
+			log.Printf("No API secret provided; store may reject requests")
+		}
+		return store.UseHTTP(baseURL, apiSecret)
 	},
 }
 
@@ -127,18 +136,13 @@ func FromConfig() (*Service, text.Editor, error) {
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found; ignore error if desired
-			log.Printf("no config file; using defaults")
+			log.Printf("no config file")
 		} else {
 			log.Fatalf("can't read config file: %v", err)
 		}
 	}
 
-	// FIXME: why isn't this accessing the right store type?
 	storeType := viper.GetString(ConfigStoreType)
-	log.Printf("FULL CONFIG: %+v", viper.AllSettings())
-	log.Printf("STORE TYPE: %v", storeType)
-
-	storeType = viper.GetString("store.type")
 
 	var s store.Store
 	if storeFactory, ok := StoreFactories[StoreType(storeType)]; !ok {

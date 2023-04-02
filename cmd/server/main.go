@@ -11,6 +11,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/keyauth/v2"
 	"github.com/lukasschwab/tiir/pkg/render"
 	"github.com/lukasschwab/tiir/pkg/text"
 	"github.com/lukasschwab/tiir/pkg/tir"
@@ -40,7 +41,10 @@ func main() {
 	// Inbound logging.
 	app.Use(logger.New())
 
-	// TODO: think about simple auth.
+	app.Use(keyauth.New(keyauth.Config{
+		Filter:    authFilter,
+		Validator: validateAPIKey,
+	}))
 
 	// Create text.
 	app.Post("/texts", func(c *fiber.Ctx) error {
@@ -115,7 +119,7 @@ func main() {
 	app.Get("/texts", func(c *fiber.Ctx) error {
 		// FIXME: handle errors.
 		texts, _ := configuredService.List()
-		// TODO: look at accept headers.
+		// TODO: look at accept headers, not just a format parameter.
 		renderer := listRenderer[c.Query("format", "html")]
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return renderer(texts, c)

@@ -61,6 +61,9 @@ func init() {
 	flagBaseURL := "base-url"
 	rootCmd.PersistentFlags().String(flagBaseURL, "", "when store is 'http,' specifies service URL to use")
 	viper.BindPFlag(tir.ConfigHTTPStoreBaseURL, rootCmd.PersistentFlags().Lookup(flagBaseURL))
+	flagAPISecret := "api-secret"
+	rootCmd.PersistentFlags().String(flagAPISecret, "", "when store is 'http,' specifies API secret to authorize requests")
+	viper.BindPFlag(tir.ConfigHTTPStoreAPISecret, rootCmd.PersistentFlags().Lookup(flagAPISecret))
 
 	flagEditor := "editor"
 	rootCmd.PersistentFlags().StringP(flagEditor, "e", "tea", fmt.Sprintf("editor to use (%v)", strings.Join(tir.EditorOptions, ", ")))

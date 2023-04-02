@@ -5,18 +5,24 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
 var (
-	notFoundError = errors.New("not found")
+	errNotFound = errors.New("not found")
 )
 
-func UseHTTP(baseURL string) Store {
-	return &httpStore{baseURL: baseURL}
+func UseHTTP(baseURL, apiSecret string) (Store, error) {
+	url, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
+	}
+	return &httpStore{baseURL: url, apiSecret: apiSecret}, nil
 }
 
 // httpStore implements Store for a remote cmd/server process.
@@ -26,16 +32,33 @@ func UseHTTP(baseURL string) Store {
 // connect). As it is, this mirrors the routes and renderers exposed by
 // cmd/server; these are hidden dependencies!
 type httpStore struct {
-	baseURL string
+	baseURL   *url.URL
+	apiSecret string
+}
+
+// newRequest wraps http.NewRequest for requests rooted at h.baseURL.
+func (h *httpStore) newRequest(method string, body io.Reader, path ...string) (*http.Request, error) {
+	requestURL := h.baseURL.JoinPath(path...).String()
+	req, err := http.NewRequest(method, requestURL, body)
+	if err != nil {
+		return req, err
+	}
+	req.Header.Add(fiber.HeaderContentType, "application/json")
+	if h.apiSecret != "" {
+		req.Header.Add(fiber.HeaderAuthorization, fmt.Sprintf("Bearer %s", h.apiSecret))
+	}
+	return req, nil
 }
 
 // Read implements Store.
 func (h *httpStore) Read(id string) (*text.Text, error) {
 	result := new(text.Text)
-	if resp, err := http.Get(fmt.Sprintf("%s/texts/%s", h.baseURL, id)); err != nil {
+	if req, err := h.newRequest(http.MethodGet, nil, "texts", id); err != nil {
+		return nil, fmt.Errorf("error building request: %w", err)
+	} else if resp, err := http.DefaultClient.Do(req); err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	} else if resp.StatusCode == http.StatusNotFound {
-		return nil, notFoundError
+		return nil, errNotFound
 	} else if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	} else if err := result.Validate(); err != nil {
@@ -54,25 +77,22 @@ func (h *httpStore) Upsert(t *text.Text) (*text.Text, error) {
 	}
 	body := bytes.NewReader(marshaled)
 
-	var method, url string
-	if _, err := h.Read(t.ID); errors.Is(err, notFoundError) {
+	var method string
+	var path []string
+	if _, err := h.Read(t.ID); errors.Is(err, errNotFound) {
 		// The record doesn't exist; create it.
-		method, url = http.MethodPost, fmt.Sprintf("%s/texts", h.baseURL)
+		method, path = http.MethodPost, []string{"texts"}
 	} else if err != nil {
 		return nil, fmt.Errorf("unexpected error: %w", err)
 	} else {
 		// It exists; update it.
-		method, url = http.MethodPatch, fmt.Sprintf("%s/texts/%s", h.baseURL, t.ID)
+		method, path = http.MethodPatch, []string{"texts", t.ID}
 	}
 
 	result := new(text.Text)
-	req, err := http.NewRequest(method, url, body)
-	if err != nil {
-		return nil, fmt.Errorf("error making request: %w", err)
-	}
-	req.Header.Add(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-
-	if resp, err := http.DefaultClient.Do(req); err != nil {
+	if req, err := h.newRequest(method, body, path...); err != nil {
+		return nil, fmt.Errorf("error building request: %w", err)
+	} else if resp, err := http.DefaultClient.Do(req); err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	} else if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
@@ -85,7 +105,7 @@ func (h *httpStore) Upsert(t *text.Text) (*text.Text, error) {
 // Delete implements Store.
 func (h *httpStore) Delete(id string) (*text.Text, error) {
 	result := new(text.Text)
-	if req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/texts/%s", h.baseURL, id), nil); err != nil {
+	if req, err := h.newRequest(http.MethodDelete, nil, "texts", id); err != nil {
 		return nil, fmt.Errorf("error building request: %w", err)
 	} else if resp, err := http.DefaultClient.Do(req); err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
@@ -99,7 +119,7 @@ func (h *httpStore) Delete(id string) (*text.Text, error) {
 
 // List implements Store. It re-sorts the response accoding to c and d.
 func (h *httpStore) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/texts", h.baseURL), nil)
+	req, err := h.newRequest(http.MethodGet, nil, "texts")
 	if err != nil {
 		return nil, fmt.Errorf("error building request: %w", err)
 	}
