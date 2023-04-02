@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 
@@ -50,6 +51,17 @@ func (h *httpStore) newRequest(method string, body io.Reader, path ...string) (*
 	return req, nil
 }
 
+func checkStatus(resp *http.Response) error {
+	if resp.StatusCode/100 != 2 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("Error reading response body: %v", err)
+		}
+		return fmt.Errorf("server responded %d: %s", resp.StatusCode, body)
+	}
+	return nil
+}
+
 // Read implements Store.
 func (h *httpStore) Read(id string) (*text.Text, error) {
 	result := new(text.Text)
@@ -59,6 +71,8 @@ func (h *httpStore) Read(id string) (*text.Text, error) {
 		return nil, fmt.Errorf("error making request: %w", err)
 	} else if resp.StatusCode == http.StatusNotFound {
 		return nil, errNotFound
+	} else if err := checkStatus(resp); err != nil {
+		return nil, err
 	} else if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	} else if err := result.Validate(); err != nil {
@@ -94,6 +108,8 @@ func (h *httpStore) Upsert(t *text.Text) (*text.Text, error) {
 		return nil, fmt.Errorf("error building request: %w", err)
 	} else if resp, err := http.DefaultClient.Do(req); err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
+	} else if err := checkStatus(resp); err != nil {
+		return nil, err
 	} else if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	} else if err := result.Validate(); err != nil {
@@ -109,6 +125,8 @@ func (h *httpStore) Delete(id string) (*text.Text, error) {
 		return nil, fmt.Errorf("error building request: %w", err)
 	} else if resp, err := http.DefaultClient.Do(req); err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
+	} else if err := checkStatus(resp); err != nil {
+		return nil, err
 	} else if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	} else if err := result.Validate(); err != nil {
@@ -131,7 +149,8 @@ func (h *httpStore) List(c text.Comparator, d text.Direction) ([]*text.Text, err
 	var result []*text.Text
 	if resp, err := http.DefaultClient.Do(req); err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
-		// TODO: handle "not found" status.
+	} else if err := checkStatus(resp); err != nil {
+		return nil, err
 	} else if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
