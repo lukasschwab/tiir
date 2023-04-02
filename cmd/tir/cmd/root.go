@@ -13,7 +13,7 @@ import (
 )
 
 // Config initialized and closed by rootCmd pre- and post-run funcs.
-var cfg tir.Config
+var cfg *tir.Config
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{

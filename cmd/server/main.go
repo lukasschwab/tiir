@@ -37,12 +37,12 @@ func main() {
 	}
 	defer cfg.Service.Close()
 
-	// Inbound logging.
 	app.Use(logger.New())
 
+	apiSecret := cfg.GetAPISecret()
 	app.Use(keyauth.New(keyauth.Config{
-		Filter:    authFilter,
-		Validator: validateAPIKey,
+		Filter:    filter(apiSecret),
+		Validator: validator(apiSecret),
 	}))
 
 	// Create text.

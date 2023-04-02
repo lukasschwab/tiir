@@ -47,8 +47,8 @@ const (
 // StoreOptions group the available StoreTypes for rendering CLI helper text.
 var StoreOptions = []string{string(StoreTypeFile), string(StoreTypeMemory), string(StoreTypeHTTP)}
 
-var storeFactories = map[StoreType]func() (store.Store, error){
-	StoreTypeFile: func() (store.Store, error) {
+var storeFactories = map[StoreType]func(*Config) (store.Store, error){
+	StoreTypeFile: func(*Config) (store.Store, error) {
 		filepath := viper.GetString(ConfigFileStoreLocation)
 		if filepath == "" {
 			return nil, errors.New("must provide filepath for file store")
@@ -56,18 +56,18 @@ var storeFactories = map[StoreType]func() (store.Store, error){
 		log.Printf("Using file store: %v", filepath)
 		return store.UseFile(filepath)
 	},
-	StoreTypeMemory: func() (store.Store, error) {
+	StoreTypeMemory: func(*Config) (store.Store, error) {
 		log.Printf("Using memory store")
 		return store.UseMemory(), nil
 	},
-	StoreTypeHTTP: func() (store.Store, error) {
+	StoreTypeHTTP: func(cfg *Config) (store.Store, error) {
 		baseURL := viper.GetString(ConfigHTTPStoreBaseURL)
 		if baseURL == "" {
 			return nil, errors.New("must provide base URL for HTTP store")
 		}
 		log.Printf("Using HTTP store: %v", baseURL)
 
-		apiSecret := viper.GetString(ConfigHTTPStoreAPISecret)
+		apiSecret := cfg.GetAPISecret()
 		if apiSecret == "" {
 			log.Printf("No API secret provided; store may reject requests")
 		}
@@ -102,7 +102,7 @@ var (
 // + The default text.Editor is edit.Tea.
 //
 // The caller is responsible for calling (Config).Service.Close() appropriately.
-func LoadConfig() (Config, error) {
+func LoadConfig() (*Config, error) {
 	viper.SetEnvPrefix("tir")
 	viper.SetConfigName(".tir.config")
 	viper.SetConfigType("json")
@@ -123,18 +123,18 @@ func LoadConfig() (Config, error) {
 			// Config file not found; ignore error if desired
 			log.Printf("no config file")
 		} else {
-			return Config{}, fmt.Errorf("can't read config file: %w", err)
+			return nil, fmt.Errorf("can't read config file: %w", err)
 		}
 	}
 
-	cfg := Config{v: viper.GetViper()}
+	cfg := &Config{v: viper.GetViper()}
 
 	// Construct a service.
 	storeFactory, ok := storeFactories[cfg.getStoreType()]
 	if !ok {
 		return cfg, fmt.Errorf("invalid store type '%v'", cfg.getStoreType())
 	}
-	store, err := storeFactory()
+	store, err := storeFactory(cfg)
 	if err != nil {
 		return cfg, fmt.Errorf("error generating store: %w", err)
 	}
@@ -164,4 +164,8 @@ func (cfg *Config) getStoreType() StoreType {
 
 func (cfg *Config) getEditorType() EditorType {
 	return EditorType(cfg.v.GetString(ConfigEditor))
+}
+
+func (cfg *Config) GetAPISecret() string {
+	return cfg.v.GetString(ConfigHTTPStoreAPISecret)
 }
