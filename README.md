@@ -54,3 +54,14 @@ One nice thing about interfaces: defining them early lets you implement things o
 To get current tir behavior... I can use this locally and just throw my .tir.json file someplace it'll be backed up by some other daemon (i.e. ~/Documents)! But I have to figure out my publish flow if I want a public site.
 
 For a read-only public site, can either run the fly.io server with a flag *or* I can build static assets and deploy them to e.g. GitHub Pages. Or I have to figure out fly.io authentication.
+
+## MVP
+
++ "Hosted" tir; I can post things to tir from a work computer.
++ That means figuring out auth.
+
+## More things to learn
+
++ `GORM` with some SQL store, e.g. Planetscale.
++ Running a backup daemon.
++ Typescript/React frontend. Can go deep, deep down the rabbit-hole and build an OAuth app.
