@@ -14,10 +14,10 @@ func validator(apiSecret string) func(*fiber.Ctx, string) (bool, error) {
 	return func(c *fiber.Ctx, requestKey string) (bool, error) {
 		log.Printf("requestKey: %v", requestKey)
 
-		hashedApiKey := sha256.Sum256([]byte(apiSecret))
+		hashedAPIKey := sha256.Sum256([]byte(apiSecret))
 		hashedRequestKey := sha256.Sum256([]byte(requestKey))
 
-		if subtle.ConstantTimeCompare(hashedApiKey[:], hashedRequestKey[:]) == 1 {
+		if subtle.ConstantTimeCompare(hashedAPIKey[:], hashedRequestKey[:]) == 1 {
 			return true, nil
 		}
 		return false, keyauth.ErrMissingOrMalformedAPIKey

@@ -18,6 +18,7 @@ var (
 	errNotFound = errors.New("not found")
 )
 
+// UseHTTP requests to a remote cmd/server to read and write texts.
 func UseHTTP(baseURL, apiSecret string) (Store, error) {
 	url, err := url.Parse(baseURL)
 	if err != nil {

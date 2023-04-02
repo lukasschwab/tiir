@@ -12,7 +12,19 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config keys.
+// Values providable via a JSON config file. For example, this configures tir to
+// use a file store rooted at /Users/me/.tir.json and the Tea editor:
+//
+//	{ "store": { "type": "file", "path": "/Users/me/.tir.json" }, "editor": "tea" }
+//
+// This configures tir to talk to a server at tir.example.com:
+//
+//	{ "store": { "type": "http", "base_url": "https://tir.example.com", "api_secret": "YOUR_SECRET" } }
+//
+// For info on where tir looks for a config, see [LoadConfig]. For info about
+// how to provide configuration, see [viper].
+//
+// [viper]: https://github.com/spf13/viper
 const (
 	// ConfigStore is the top-level key for store configuration.
 	ConfigStore = "store"
@@ -33,67 +45,79 @@ const (
 	ConfigEditor = "editor"
 )
 
-type StoreType string
+type storeType string
 
+// Values for the store.type config variable.
 const (
 	// StoreTypeFile selects the store.file store (default).
-	StoreTypeFile StoreType = "file"
+	StoreTypeFile storeType = "file"
 	// StoreTypeMemory selects the store.memory store.
-	StoreTypeMemory StoreType = "memory"
+	StoreTypeMemory storeType = "memory"
 	// StoreTypeMemory selects the store.http store.
-	StoreTypeHTTP StoreType = "http"
+	StoreTypeHTTP storeType = "http"
 )
 
-// StoreOptions group the available StoreTypes for rendering CLI helper text.
-var StoreOptions = []string{string(StoreTypeFile), string(StoreTypeMemory), string(StoreTypeHTTP)}
+type editorType string
 
-var storeFactories = map[StoreType]func(*Config) (store.Store, error){
-	StoreTypeFile: func(*Config) (store.Store, error) {
-		filepath := viper.GetString(ConfigFileStoreLocation)
-		if filepath == "" {
-			return nil, errors.New("must provide filepath for file store")
-		}
-		log.Printf("Using file store: %v", filepath)
-		return store.UseFile(filepath)
-	},
-	StoreTypeMemory: func(*Config) (store.Store, error) {
-		log.Printf("Using memory store")
-		return store.UseMemory(), nil
-	},
-	StoreTypeHTTP: func(cfg *Config) (store.Store, error) {
-		baseURL := viper.GetString(ConfigHTTPStoreBaseURL)
-		if baseURL == "" {
-			return nil, errors.New("must provide base URL for HTTP store")
-		}
-		log.Printf("Using HTTP store: %v", baseURL)
-
-		apiSecret := cfg.GetAPISecret()
-		if apiSecret == "" {
-			log.Printf("No API secret provided; store may reject requests")
-		}
-		return store.UseHTTP(baseURL, apiSecret)
-	},
-}
-
-type EditorType string
-
+// Values for the editor config variable.
 const (
 	// EditorTypeVim selects the edit.Vim editor.
-	EditorTypeVim EditorType = "vim"
+	EditorTypeVim editorType = "vim"
 	// EditorTypeTea selects the edit.Tea editor (default).
-	EditorTypeTea EditorType = "tea"
+	EditorTypeTea editorType = "tea"
 )
 
 var (
-	// EditorOptions render the list of options in CLI help text.
+	// StoreOptions group the available StoreTypes for rendering CLI helper
+	// text; it matches the storeFactories map keyset.
+	StoreOptions = []string{
+		string(StoreTypeFile),
+		string(StoreTypeMemory),
+		string(StoreTypeHTTP),
+	}
+
+	// EditorOptions group the available EditorTypes for rendering CLI helper
+	// text; it matches the editors map keyset.
 	EditorOptions = []string{string(EditorTypeVim), string(EditorTypeTea)}
-	editors       = map[EditorType]text.Editor{
+)
+
+// Enum-option to value lookups.
+var (
+	storeFactories = map[storeType]func(*Config) (store.Store, error){
+		StoreTypeFile: func(*Config) (store.Store, error) {
+			filepath := viper.GetString(ConfigFileStoreLocation)
+			if filepath == "" {
+				return nil, errors.New("must provide filepath for file store")
+			}
+			log.Printf("Using file store: %v", filepath)
+			return store.UseFile(filepath)
+		},
+		StoreTypeMemory: func(*Config) (store.Store, error) {
+			log.Printf("Using memory store")
+			return store.UseMemory(), nil
+		},
+		StoreTypeHTTP: func(cfg *Config) (store.Store, error) {
+			baseURL := viper.GetString(ConfigHTTPStoreBaseURL)
+			if baseURL == "" {
+				return nil, errors.New("must provide base URL for HTTP store")
+			}
+			log.Printf("Using HTTP store: %v", baseURL)
+
+			apiSecret := cfg.GetAPISecret()
+			if apiSecret == "" {
+				log.Printf("No API secret provided; store may reject requests")
+			}
+			return store.UseHTTP(baseURL, apiSecret)
+		},
+	}
+
+	editors = map[editorType]text.Editor{
 		EditorTypeVim: edit.Vim,
 		EditorTypeTea: edit.Tea,
 	}
 )
 
-// FromConfig loads a tir configuration from user-provided configuration.
+// LoadConfig loads a tir configuration from user-provided configuration.
 // Users can provide configuration via a JSON config file, via environment
 // variables, or through command-line arguments with the appropriate viper
 // bindings.
@@ -148,24 +172,22 @@ func LoadConfig() (*Config, error) {
 	return cfg, nil
 }
 
-// NOTE: should Config embed a Service and an Editor, or should it just store
-// the factory for the Service? Embedding is nice for getting a single package-
-// scoped variable for the cobra app (magic I want to minimize), but I'd prefer
-// to isolate store-factory errors from config-loading errors.
+// Config for a Service and Editor; see [LoadConfig].
 type Config struct {
 	v       *viper.Viper
 	Service *Service
 	Editor  text.Editor
 }
 
-func (cfg *Config) getStoreType() StoreType {
-	return StoreType(cfg.v.GetString(ConfigStoreType))
+func (cfg *Config) getStoreType() storeType {
+	return storeType(cfg.v.GetString(ConfigStoreType))
 }
 
-func (cfg *Config) getEditorType() EditorType {
-	return EditorType(cfg.v.GetString(ConfigEditor))
+func (cfg *Config) getEditorType() editorType {
+	return editorType(cfg.v.GetString(ConfigEditor))
 }
 
+// GetAPISecret provided to cfg.
 func (cfg *Config) GetAPISecret() string {
 	return cfg.v.GetString(ConfigHTTPStoreAPISecret)
 }
