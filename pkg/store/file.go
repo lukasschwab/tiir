@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/lukasschwab/tiir/pkg/text"
 )
@@ -23,7 +24,7 @@ func useFile(path string) (*file, error) {
 		return nil, fmt.Errorf("error opening file: %w", err)
 	}
 
-	fStore := &file{f}
+	fStore := &file{File: f}
 	if i, err := fStore.parse(); err != nil {
 		return nil, fmt.Errorf("can't parse file contents: %w", err)
 	} else if err := fStore.commit(i); err != nil {
@@ -37,12 +38,20 @@ func useFile(path string) (*file, error) {
 // Loads all texts from the underlying os.File into a memory store as an
 // intermediate form for each operation; most of the store logic is delegated to
 // the memory implementation.
+//
+// NOTE: simultaneous writes, e.g. from simultaneous HTTP requests, can yield
+// unexpected behavior: every write overwrites the full file. This could be
+// improved by persisting a centralized `memory` here to consolidate writes.
 type file struct {
+	sync.Mutex
 	*os.File
 }
 
 // parse all records in f into memory.
 func (f *file) parse() (*memory, error) {
+	f.Lock()
+	defer f.Unlock()
+
 	result := new(map[string]*text.Text)
 	if _, err := f.Seek(0, 0); err != nil {
 		return nil, fmt.Errorf("couldn't seek to beginning of file before parsing: %v", err)
@@ -59,6 +68,9 @@ func (f *file) parse() (*memory, error) {
 
 // commit all records in memory to the underlying file. Overwrites everything.
 func (f *file) commit(new *memory) error {
+	f.Lock()
+	defer f.Unlock()
+
 	if newContents, err := json.MarshalIndent(new.texts, "", "\t"); err != nil {
 		return fmt.Errorf("couldn't marshal texts to JSON: %w", err)
 	} else if err := f.Truncate(0); err != nil {

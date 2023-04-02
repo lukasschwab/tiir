@@ -7,17 +7,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lukasschwab/tiir/pkg/text"
 	"github.com/lukasschwab/tiir/pkg/tir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-// Config properties initialized and closed by rootCmd pre- and post-run funcs.
-var (
-	configuredService *tir.Service
-	configuredEditor  text.Editor
-)
+// Config initialized and closed by rootCmd pre- and post-run funcs.
+var cfg tir.Config
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -28,13 +24,15 @@ var rootCmd = &cobra.Command{
 		if !verbose {
 			log.SetOutput(io.Discard)
 		}
-		if configuredService, configuredEditor, err = tir.FromConfig(); err != nil {
+
+		if cfg, err = tir.LoadConfig(); err != nil {
 			return fmt.Errorf("error loading config: %w", err)
 		}
+
 		return nil
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-		return configuredService.Close()
+		return cfg.Service.Close()
 	},
 }
 

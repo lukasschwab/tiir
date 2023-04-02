@@ -31,7 +31,7 @@ to quickly create a Cobra application.`,
 			log.Fatalf("Invalid renderer type '%s'; use one of %v", output, strings.Join(rendererOptions, ", "))
 		}
 
-		texts, err := configuredService.List()
+		texts, err := cfg.Service.List()
 		if err != nil {
 			log.Fatalf("Error listing texts: %v", err)
 		}

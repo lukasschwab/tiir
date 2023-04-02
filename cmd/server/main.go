@@ -31,12 +31,11 @@ var (
 func main() {
 	app := fiber.New()
 
-	configuredService, _, err := tir.FromConfig()
+	cfg, err := tir.LoadConfig()
 	if err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}
-
-	defer configuredService.Close()
+	defer cfg.Service.Close()
 
 	// Inbound logging.
 	app.Use(logger.New())
@@ -54,7 +53,7 @@ func main() {
 			return fmt.Errorf("error parsing request body: %w", err)
 		}
 
-		created, err := configuredService.Create(t)
+		created, err := cfg.Service.Create(t)
 		if err != nil {
 			return fmt.Errorf("error writing record: %w", err)
 		}
@@ -68,7 +67,7 @@ func main() {
 			return errors.New("update request must specify record ID")
 		}
 
-		t, err := configuredService.Read(id)
+		t, err := cfg.Service.Read(id)
 		if err != nil {
 			// BODGE: assume the text wasn't found. Makes upsert-adaptation in
 			// store.http easier.
@@ -93,7 +92,7 @@ func main() {
 			return fmt.Errorf("error parsing request body: %w", err)
 		}
 
-		updated, err := configuredService.Update(id, updates)
+		updated, err := cfg.Service.Update(id, updates)
 		if err != nil {
 			return fmt.Errorf("error updating record: %w", err)
 		}
@@ -108,7 +107,7 @@ func main() {
 			return errors.New("update request must specify record ID")
 		}
 
-		deleted, err := configuredService.Delete(id)
+		deleted, err := cfg.Service.Delete(id)
 		if err != nil {
 			return fmt.Errorf("error deleting record: %w", err)
 		}
@@ -118,7 +117,7 @@ func main() {
 	// List all texts.
 	app.Get("/texts", func(c *fiber.Ctx) error {
 		// FIXME: handle errors.
-		texts, _ := configuredService.List()
+		texts, _ := cfg.Service.List()
 		// TODO: look at accept headers, not just a format parameter.
 		renderer := listRenderer[c.Query("format", "html")]
 		c.Set("Content-Type", "text/html; charset=utf-8")
@@ -137,7 +136,7 @@ func main() {
 	<-c // Block main thread until interrupt.
 	log.Printf("Gracefully shutting down...")
 	_ = app.ShutdownWithTimeout(5 * time.Second)
-	if err := configuredService.Close(); err != nil {
+	if err := cfg.Service.Close(); err != nil {
 		log.Printf("Error closing service: %v", err)
 	}
 	log.Printf("Shutdown")

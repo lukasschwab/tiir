@@ -18,11 +18,11 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if initial, err := configuredService.Read(specifiedTextID); err != nil {
+		if initial, err := cfg.Service.Read(specifiedTextID); err != nil {
 			log.Fatalf("text not found for ID: '%v'", specifiedTextID)
-		} else if final, err := initial.EditWith(configuredEditor); err != nil {
+		} else if final, err := initial.EditWith(cfg.Editor); err != nil {
 			log.Fatalf("couldn't run editor: %v", err)
-		} else if updated, err := configuredService.Update(specifiedTextID, final); err != nil {
+		} else if updated, err := cfg.Service.Update(specifiedTextID, final); err != nil {
 			log.Fatalf("error comitting new record: %v", err)
 		} else if repr, err := json.MarshalIndent(updated, "", "\t"); err != nil {
 			log.Fatalf("error representing updated record '%v': %v", updated.ID, err)

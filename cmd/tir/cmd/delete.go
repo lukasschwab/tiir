@@ -18,7 +18,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if deleted, err := configuredService.Delete(specifiedTextID); err != nil {
+		if deleted, err := cfg.Service.Delete(specifiedTextID); err != nil {
 			log.Fatalf("error deleting record: %v", err)
 		} else if repr, err := json.MarshalIndent(deleted, "", "\t"); err != nil {
 			log.Fatalf("error representing deleted record '%v': %v", deleted.ID, err)
@@ -30,6 +30,5 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(deleteCmd)
-
 	requireID(deleteCmd)
 }

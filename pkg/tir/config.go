@@ -12,26 +12,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Scratchpad config example.
-/* {
-	// Stores.
-	"store": {
-		"type": "file",
-		"path": "~/.tir.json"
-	},
-	"store": {
-		"type": "http",
-		"base_url": "tir.fly.io",
-	},
-	"store": {
-		"type": "memory",
-	},
-
-	// Editors.
-	"editor": "vim",
-	"editor": "tea",
-} */
-
 // Config keys.
 const (
 	// ConfigStore is the top-level key for store configuration.
@@ -64,9 +44,10 @@ const (
 	StoreTypeHTTP StoreType = "http"
 )
 
+// StoreOptions group the available StoreTypes for rendering CLI helper text.
 var StoreOptions = []string{string(StoreTypeFile), string(StoreTypeMemory), string(StoreTypeHTTP)}
 
-var StoreFactories = map[StoreType]func() (store.Store, error){
+var storeFactories = map[StoreType]func() (store.Store, error){
 	StoreTypeFile: func() (store.Store, error) {
 		filepath := viper.GetString(ConfigFileStoreLocation)
 		if filepath == "" {
@@ -103,34 +84,38 @@ const (
 	EditorTypeTea EditorType = "tea"
 )
 
-var EditorOptions = []string{string(EditorTypeVim), string(EditorTypeTea)}
+var (
+	// EditorOptions render the list of options in CLI help text.
+	EditorOptions = []string{string(EditorTypeVim), string(EditorTypeTea)}
+	editors       = map[EditorType]text.Editor{
+		EditorTypeVim: edit.Vim,
+		EditorTypeTea: edit.Tea,
+	}
+)
 
-var Editors = map[EditorType]text.Editor{
-	EditorTypeVim: edit.Vim,
-	EditorTypeTea: edit.Tea,
-}
-
-// FromConfig loads a Service and text.Editor from defaults, overridden by user-
-// provided configuration.
+// FromConfig loads a tir configuration from user-provided configuration.
+// Users can provide configuration via a JSON config file, via environment
+// variables, or through command-line arguments with the appropriate viper
+// bindings.
 //
 // + The default Service is backed by a file at $HOME/.tir.json.
 // + The default text.Editor is edit.Tea.
-func FromConfig() (*Service, text.Editor, error) {
+//
+// The caller is responsible for calling (Config).Service.Close() appropriately.
+func LoadConfig() (Config, error) {
+	viper.SetEnvPrefix("tir")
 	viper.SetConfigName(".tir.config")
 	viper.SetConfigType("json")
 	viper.AddConfigPath("/etc/tir/")
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
+	if home, err := os.UserHomeDir(); err == nil {
+		viper.AddConfigPath(home)
+		viper.SetDefault(ConfigFileStoreLocation, home+"/.tir.json")
 	}
-	viper.AddConfigPath(home)
 
 	// Write enum-type results as strings to avoid silently borking
 	// viper.GetString's type indirection.
 	viper.SetDefault(ConfigStoreType, string(StoreTypeFile))
-	viper.SetDefault(ConfigFileStoreLocation, home+"/.tir.json")
-
 	viper.SetDefault(ConfigEditor, string(EditorTypeTea))
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -138,23 +123,45 @@ func FromConfig() (*Service, text.Editor, error) {
 			// Config file not found; ignore error if desired
 			log.Printf("no config file")
 		} else {
-			log.Fatalf("can't read config file: %v", err)
+			return Config{}, fmt.Errorf("can't read config file: %w", err)
 		}
 	}
 
-	storeType := viper.GetString(ConfigStoreType)
+	cfg := Config{v: viper.GetViper()}
 
-	var s store.Store
-	if storeFactory, ok := StoreFactories[StoreType(storeType)]; !ok {
-		return nil, nil, fmt.Errorf("invalid store type '%v'", storeType)
-	} else if s, err = storeFactory(); err != nil {
-		return nil, nil, fmt.Errorf("error generating %v store: %w", storeType, err)
+	// Construct a service.
+	storeFactory, ok := storeFactories[cfg.getStoreType()]
+	if !ok {
+		return cfg, fmt.Errorf("invalid store type '%v'", cfg.getStoreType())
+	}
+	store, err := storeFactory()
+	if err != nil {
+		return cfg, fmt.Errorf("error generating store: %w", err)
+	}
+	cfg.Service = New(store)
+
+	// Construct a store.
+	if cfg.Editor, ok = editors[cfg.getEditorType()]; !ok {
+		return cfg, fmt.Errorf("invalid editor type '%v'", cfg.getEditorType())
 	}
 
-	editor := viper.GetString(ConfigEditor)
-	if _, ok := Editors[EditorType(editor)]; !ok {
-		return nil, nil, fmt.Errorf("invalid editor type '%v'", editor)
-	}
+	return cfg, nil
+}
 
-	return New(s), Editors[EditorType(editor)], nil
+// NOTE: should Config embed a Service and an Editor, or should it just store
+// the factory for the Service? Embedding is nice for getting a single package-
+// scoped variable for the cobra app (magic I want to minimize), but I'd prefer
+// to isolate store-factory errors from config-loading errors.
+type Config struct {
+	v       *viper.Viper
+	Service *Service
+	Editor  text.Editor
+}
+
+func (cfg *Config) getStoreType() StoreType {
+	return StoreType(cfg.v.GetString(ConfigStoreType))
+}
+
+func (cfg *Config) getEditorType() EditorType {
+	return EditorType(cfg.v.GetString(ConfigEditor))
 }

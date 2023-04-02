@@ -20,9 +20,9 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initial := &text.Text{}
-		if final, err := initial.EditWith(configuredEditor); err != nil {
+		if final, err := initial.EditWith(cfg.Editor); err != nil {
 			log.Fatalf("couldn't run editor: %v", err)
-		} else if created, err := configuredService.Create(final); err != nil {
+		} else if created, err := cfg.Service.Create(final); err != nil {
 			log.Fatalf("error comitting new record: %v", err)
 		} else if repr, err := json.MarshalIndent(created, "", "\t"); err != nil {
 			log.Fatalf("error representing created record '%v': %v", created.ID, err)
@@ -34,13 +34,4 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(createCmd)
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// createCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// createCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
