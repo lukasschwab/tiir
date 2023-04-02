@@ -64,12 +64,19 @@ func checkStatus(resp *http.Response) error {
 
 // Read implements Store.
 func (h *httpStore) Read(id string) (*text.Text, error) {
-	result := new(text.Text)
-	if req, err := h.newRequest(http.MethodGet, nil, "texts", id); err != nil {
+	req, err := h.newRequest(http.MethodGet, nil, "texts", id)
+	if err != nil {
 		return nil, fmt.Errorf("error building request: %w", err)
-	} else if resp, err := http.DefaultClient.Do(req); err != nil {
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
-	} else if resp.StatusCode == http.StatusNotFound {
+	}
+	defer resp.Body.Close()
+
+	result := new(text.Text)
+	if resp.StatusCode == http.StatusNotFound {
 		return nil, errNotFound
 	} else if err := checkStatus(resp); err != nil {
 		return nil, err
@@ -103,12 +110,19 @@ func (h *httpStore) Upsert(t *text.Text) (*text.Text, error) {
 		method, path = http.MethodPatch, []string{"texts", t.ID}
 	}
 
-	result := new(text.Text)
-	if req, err := h.newRequest(method, body, path...); err != nil {
+	req, err := h.newRequest(method, body, path...)
+	if err != nil {
 		return nil, fmt.Errorf("error building request: %w", err)
-	} else if resp, err := http.DefaultClient.Do(req); err != nil {
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
-	} else if err := checkStatus(resp); err != nil {
+	}
+	defer resp.Body.Close()
+
+	result := new(text.Text)
+	if err := checkStatus(resp); err != nil {
 		return nil, err
 	} else if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
@@ -120,12 +134,19 @@ func (h *httpStore) Upsert(t *text.Text) (*text.Text, error) {
 
 // Delete implements Store.
 func (h *httpStore) Delete(id string) (*text.Text, error) {
-	result := new(text.Text)
-	if req, err := h.newRequest(http.MethodDelete, nil, "texts", id); err != nil {
+	req, err := h.newRequest(http.MethodDelete, nil, "texts", id)
+	if err != nil {
 		return nil, fmt.Errorf("error building request: %w", err)
-	} else if resp, err := http.DefaultClient.Do(req); err != nil {
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
-	} else if err := checkStatus(resp); err != nil {
+	}
+	defer resp.Body.Close()
+
+	result := new(text.Text)
+	if err := checkStatus(resp); err != nil {
 		return nil, err
 	} else if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
@@ -141,15 +162,20 @@ func (h *httpStore) List(c text.Comparator, d text.Direction) ([]*text.Text, err
 	if err != nil {
 		return nil, fmt.Errorf("error building request: %w", err)
 	}
+	// Don't want the default HTML representation.
 	req.Header.Add("Accept-Encoding", "application/json")
 	q := req.URL.Query()
 	q.Add("format", "application/json")
 	req.URL.RawQuery = q.Encode()
 
-	var result []*text.Text
-	if resp, err := http.DefaultClient.Do(req); err != nil {
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
-	} else if err := checkStatus(resp); err != nil {
+	}
+	defer resp.Body.Close()
+
+	var result []*text.Text
+	if err := checkStatus(resp); err != nil {
 		return nil, err
 	} else if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
