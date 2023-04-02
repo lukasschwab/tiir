@@ -12,9 +12,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/keyauth/v2"
+	"github.com/lukasschwab/tiir/pkg/config"
 	"github.com/lukasschwab/tiir/pkg/render"
 	"github.com/lukasschwab/tiir/pkg/text"
-	"github.com/lukasschwab/tiir/pkg/tir"
 )
 
 var (
@@ -31,7 +31,7 @@ var (
 func main() {
 	app := fiber.New()
 
-	cfg, err := tir.LoadConfig()
+	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}

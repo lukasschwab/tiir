@@ -1,4 +1,4 @@
-package tir
+package config
 
 import (
 	"errors"
@@ -9,6 +9,7 @@ import (
 	"github.com/lukasschwab/tiir/pkg/edit"
 	"github.com/lukasschwab/tiir/pkg/store"
 	"github.com/lukasschwab/tiir/pkg/text"
+	"github.com/lukasschwab/tiir/pkg/tir"
 	"github.com/spf13/viper"
 )
 
@@ -26,23 +27,23 @@ import (
 //
 // [viper]: https://github.com/spf13/viper
 const (
-	// ConfigStore is the top-level key for store configuration.
-	ConfigStore = "store"
-	// ConfigStoreType must match a StoreType.
-	ConfigStoreType = ConfigStore + ".type"
+	// KeyStoreGroup is the top-level key for store configuration.
+	KeyStoreGroup = "store"
+	// KeyStoreType must match a StoreType.
+	KeyStoreType = KeyStoreGroup + ".type"
 
-	// ConfigFileStoreLocation must be defined for file stores.
-	ConfigFileStoreLocation = ConfigStore + ".path"
+	// KeyFileStoreLocation must be defined for file stores.
+	KeyFileStoreLocation = KeyStoreGroup + ".path"
 
-	// ConfigHTTPStoreBaseURL must be defined for HTTP stores.
-	ConfigHTTPStoreBaseURL = ConfigStore + ".base_url"
-	// ConfigHTTPStoreAPISecret defines an API secret to authorize requests to
+	// KeyHTTPStoreBaseURL must be defined for HTTP stores.
+	KeyHTTPStoreBaseURL = KeyStoreGroup + ".base_url"
+	// KeyHTTPStoreAPISecret defines an API secret to authorize requests to
 	// the tir server at base_url. This is an optional config variable, but a
 	// server that requires it will reject requests.
-	ConfigHTTPStoreAPISecret = ConfigStore + ".api_secret"
+	KeyHTTPStoreAPISecret = KeyStoreGroup + ".api_secret"
 
-	// ConfigEditor is the top-level key for CLI editor configuration.
-	ConfigEditor = "editor"
+	// KeyEditor is the top-level key for CLI editor configuration.
+	KeyEditor = "editor"
 )
 
 type storeType string
@@ -67,25 +68,11 @@ const (
 	EditorTypeTea editorType = "tea"
 )
 
-var (
-	// StoreOptions group the available StoreTypes for rendering CLI helper
-	// text; it matches the storeFactories map keyset.
-	StoreOptions = []string{
-		string(StoreTypeFile),
-		string(StoreTypeMemory),
-		string(StoreTypeHTTP),
-	}
-
-	// EditorOptions group the available EditorTypes for rendering CLI helper
-	// text; it matches the editors map keyset.
-	EditorOptions = []string{string(EditorTypeVim), string(EditorTypeTea)}
-)
-
 // Enum-option to value lookups.
 var (
 	storeFactories = map[storeType]func(*Config) (store.Store, error){
 		StoreTypeFile: func(*Config) (store.Store, error) {
-			filepath := viper.GetString(ConfigFileStoreLocation)
+			filepath := viper.GetString(KeyFileStoreLocation)
 			if filepath == "" {
 				return nil, errors.New("must provide filepath for file store")
 			}
@@ -97,7 +84,7 @@ var (
 			return store.UseMemory(), nil
 		},
 		StoreTypeHTTP: func(cfg *Config) (store.Store, error) {
-			baseURL := viper.GetString(ConfigHTTPStoreBaseURL)
+			baseURL := viper.GetString(KeyHTTPStoreBaseURL)
 			if baseURL == "" {
 				return nil, errors.New("must provide base URL for HTTP store")
 			}
@@ -117,7 +104,7 @@ var (
 	}
 )
 
-// LoadConfig loads a tir configuration from user-provided configuration.
+// Load loads a tir configuration from user-provided configuration.
 // Users can provide configuration via a JSON config file, via environment
 // variables, or through command-line arguments with the appropriate viper
 // bindings.
@@ -126,7 +113,7 @@ var (
 // + The default text.Editor is edit.Tea.
 //
 // The caller is responsible for calling (Config).Service.Close() appropriately.
-func LoadConfig() (*Config, error) {
+func Load() (*Config, error) {
 	viper.SetEnvPrefix("tir")
 	viper.SetConfigName(".tir.config")
 	viper.SetConfigType("json")
@@ -134,13 +121,13 @@ func LoadConfig() (*Config, error) {
 
 	if home, err := os.UserHomeDir(); err == nil {
 		viper.AddConfigPath(home)
-		viper.SetDefault(ConfigFileStoreLocation, home+"/.tir.json")
+		viper.SetDefault(KeyFileStoreLocation, home+"/.tir.json")
 	}
 
 	// Write enum-type results as strings to avoid silently borking
 	// viper.GetString's type indirection.
-	viper.SetDefault(ConfigStoreType, string(StoreTypeFile))
-	viper.SetDefault(ConfigEditor, string(EditorTypeTea))
+	viper.SetDefault(KeyStoreType, string(StoreTypeFile))
+	viper.SetDefault(KeyEditor, string(EditorTypeTea))
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -162,7 +149,7 @@ func LoadConfig() (*Config, error) {
 	if err != nil {
 		return cfg, fmt.Errorf("error generating store: %w", err)
 	}
-	cfg.Service = New(store)
+	cfg.Service = tir.New(store)
 
 	// Construct a store.
 	if cfg.Editor, ok = editors[cfg.getEditorType()]; !ok {
@@ -175,19 +162,19 @@ func LoadConfig() (*Config, error) {
 // Config for a Service and Editor; see [LoadConfig].
 type Config struct {
 	v       *viper.Viper
-	Service *Service
+	Service *tir.Service
 	Editor  text.Editor
 }
 
 func (cfg *Config) getStoreType() storeType {
-	return storeType(cfg.v.GetString(ConfigStoreType))
+	return storeType(cfg.v.GetString(KeyStoreType))
 }
 
 func (cfg *Config) getEditorType() editorType {
-	return editorType(cfg.v.GetString(ConfigEditor))
+	return editorType(cfg.v.GetString(KeyEditor))
 }
 
 // GetAPISecret provided to cfg.
 func (cfg *Config) GetAPISecret() string {
-	return cfg.v.GetString(ConfigHTTPStoreAPISecret)
+	return cfg.v.GetString(KeyHTTPStoreAPISecret)
 }
