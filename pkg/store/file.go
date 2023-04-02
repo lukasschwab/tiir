@@ -19,18 +19,15 @@ func UseFile(path string) (Store, error) {
 }
 
 func useFile(path string) (*file, error) {
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
+	db, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %w", err)
 	}
-
-	fStore := &file{File: f}
-	if i, err := fStore.parse(); err != nil {
+	f := &file{db: db}
+	if err := f.load(); err != nil {
 		return nil, fmt.Errorf("can't parse file contents: %w", err)
-	} else if err := fStore.commit(i); err != nil {
-		return nil, fmt.Errorf("can't write to file: %w", err)
 	}
-	return fStore, nil
+	return f, nil
 }
 
 // file implementation of Store.
@@ -43,41 +40,47 @@ func useFile(path string) (*file, error) {
 // unexpected behavior: every write overwrites the full file. This could be
 // improved by persisting a centralized `memory` here to consolidate writes.
 type file struct {
+	// Mutex for file handle operations.
 	sync.Mutex
-	*os.File
+	db *os.File
+
+	cache *memory
 }
 
 // parse all records in f into memory.
-func (f *file) parse() (*memory, error) {
+func (f *file) load() error {
 	f.Lock()
 	defer f.Unlock()
 
 	result := new(map[string]*text.Text)
-	if _, err := f.Seek(0, 0); err != nil {
-		return nil, fmt.Errorf("couldn't seek to beginning of file before parsing: %v", err)
-	} else if bytes, err := io.ReadAll(f.File); err != nil {
-		return nil, fmt.Errorf("couldn't read file: %w", err)
+	if _, err := f.db.Seek(0, 0); err != nil {
+		return fmt.Errorf("couldn't seek to beginning of file before parsing: %v", err)
+	} else if bytes, err := io.ReadAll(f.db); err != nil {
+		return fmt.Errorf("couldn't read file: %w", err)
 	} else if err := json.Unmarshal(bytes, result); err != nil {
 		if len(bytes) == 0 {
-			return useMemory(), nil
+			f.cache = useMemory()
+			return nil
 		}
-		return nil, fmt.Errorf("couldn't parse file JSON: %w", err)
+		return fmt.Errorf("couldn't parse file JSON: %w", err)
 	}
-	return &memory{texts: *result}, nil
+
+	f.cache = &memory{texts: *result}
+	return nil
 }
 
 // commit all records in memory to the underlying file. Overwrites everything.
-func (f *file) commit(new *memory) error {
+func (f *file) commit() error {
 	f.Lock()
 	defer f.Unlock()
 
-	if newContents, err := json.MarshalIndent(new.texts, "", "\t"); err != nil {
+	if newContents, err := json.MarshalIndent(f.cache.texts, "", "\t"); err != nil {
 		return fmt.Errorf("couldn't marshal texts to JSON: %w", err)
-	} else if err := f.Truncate(0); err != nil {
+	} else if err := f.db.Truncate(0); err != nil {
 		return fmt.Errorf("couldn't clear file before writing: %v", err)
-	} else if _, err := f.Seek(0, 0); err != nil {
+	} else if _, err := f.db.Seek(0, 0); err != nil {
 		return fmt.Errorf("couldn't seek to beginning of file after truncating: %v", err)
-	} else if _, err = f.Write(newContents); err != nil {
+	} else if _, err = f.db.Write(newContents); err != nil {
 		return fmt.Errorf("couldn't write to file: %w", err)
 	}
 	return nil
@@ -85,41 +88,26 @@ func (f *file) commit(new *memory) error {
 
 // Read implements Store.
 func (f *file) Read(id string) (*text.Text, error) {
-	m, err := f.parse()
-	if err != nil {
-		return nil, err
-	}
-
-	return m.Read(id)
+	return f.cache.Read(id)
 }
 
 // Upsert implements Store.
 func (f *file) Upsert(t *text.Text) (*text.Text, error) {
-	m, err := f.parse()
+	t, err := f.cache.Upsert(t)
 	if err != nil {
 		return nil, err
-	}
-
-	if t, err = m.Upsert(t); err != nil {
-		return nil, err
-	} else if err := f.commit(m); err != nil {
+	} else if err := f.commit(); err != nil {
 		return nil, err
 	}
-
 	return t, nil
 }
 
 // Delete implements Store.
 func (f *file) Delete(id string) (*text.Text, error) {
-	m, err := f.parse()
+	t, err := f.cache.Delete(id)
 	if err != nil {
 		return nil, err
-	}
-
-	t, err := m.Delete(id)
-	if err != nil {
-		return nil, err
-	} else if err := f.commit(m); err != nil {
+	} else if err := f.commit(); err != nil {
 		return nil, err
 	}
 	return t, nil
@@ -127,15 +115,10 @@ func (f *file) Delete(id string) (*text.Text, error) {
 
 // List implements Store.
 func (f *file) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
-	m, err := f.parse()
-	if err != nil {
-		return nil, err
-	}
-
-	return m.List(c, d)
+	return f.cache.List(c, d)
 }
 
 // Close implements Store.
 func (f *file) Close() error {
-	return f.File.Close()
+	return f.db.Close()
 }
