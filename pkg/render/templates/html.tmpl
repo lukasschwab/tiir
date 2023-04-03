@@ -62,7 +62,7 @@
                 <td><a href="{{.URL}}">{{.Title}}</a></td>
                 <td>{{.Author}}</td>
                 <td>{{.Note}}</td>
-                <td>{{printf "%d-%d-%d" (.Timestamp.Year) (.Timestamp.Month) (.Timestamp.Day)}}</td>
+                <td>{{printf "%d-%02d-%02d" (.Timestamp.Year) (.Timestamp.Month) (.Timestamp.Day)}}</td>
             </tr>
         {{end}}
     {{ end }}
