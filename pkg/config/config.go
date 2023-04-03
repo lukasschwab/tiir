@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/lukasschwab/tiir/pkg/edit"
 	"github.com/lukasschwab/tiir/pkg/store"
@@ -174,7 +175,14 @@ func (cfg *Config) getEditorType() editorType {
 	return editorType(cfg.v.GetString(KeyEditor))
 }
 
-// GetAPISecret provided to cfg.
+// GetAPISecret provided to cfg or the env variable TIR_API_SECRET.
 func (cfg *Config) GetAPISecret() string {
+	// BODGE: relocate or refactor this. The server gets its API secret from an
+	// environment variable, but the standard post-prefixing key is pretty bad:
+	// `TIR_STORE.API_SECRET`.
+	//
+	// Can undo this change to revert to that format.
+	cfg.v.SetEnvKeyReplacer(strings.NewReplacer("STORE.", ""))
+	cfg.v.BindEnv(KeyHTTPStoreAPISecret)
 	return cfg.v.GetString(KeyHTTPStoreAPISecret)
 }
