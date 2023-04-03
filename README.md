@@ -2,6 +2,47 @@
 
 A flexible successor to [tir](https://github.com/lukasschwab/tir), but not a drop-in replacement.
 
+## Setup
+
+### Install the CLI
+
+```console
+$ go install ./cmd/tir
+```
+
+By default, `tir` is configured to use the rich CLI interface (see [pkg/edit/tea.go](./pkg/edit/tea.go)) and store your data in `$HOME/.tir.json` (see [pkg/store/file.go](pkg/store/file.go)).
+
+To override those defaults, see [Configuration](#configuration).
+
+For CLI documentation, run `tir help`.
+
+### Deploy the server
+
+Optionally, see [Fly.io's documentation](https://fly.io/docs/languages-and-frameworks/golang/) for deploying the server: `flyctl launch`.
+
+If you expose your server to the internet, you should secure endpoints modifying your data with an API key. Generate a secret, then set it in your Fly app's environment:
+
+```console
+$ flyctl secrets set TIR_API_SECRET=YOUR_SECRET_HERE
+```
+
+## Configuration
+
+<!-- TODO: describe how the user can specify these values. Mostly command line arguments -->
+
+`tir` looks for a configuration file at `/etc/tir/.tir.config` and `$HOME/.tir.config`.
+
+```json
+{
+    "store": {
+        "type": "http",
+        "base_url": "https://tir.fly.dev/",
+        "api_secret": "YOUR_API_SECRET"
+    },
+    "editor": "tea"
+}
+```
+
 ## Goals
 
 + Support multiple backends ("stores").
