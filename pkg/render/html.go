@@ -3,8 +3,8 @@ package render
 import (
 	_ "embed" // Compile-time dependency.
 	"fmt"
+	"html/template"
 	"io"
-	"text/template"
 	"time"
 
 	"github.com/lukasschwab/tiir/pkg/text"

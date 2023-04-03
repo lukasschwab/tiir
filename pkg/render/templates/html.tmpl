@@ -1,6 +1,6 @@
 <head>
-	<title="tir">
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+	<title>tir</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" />
     <style>
         html {
             width: 1000px;
@@ -62,7 +62,7 @@
                 <td><a href="{{.URL}}">{{.Title}}</a></td>
                 <td>{{.Author}}</td>
                 <td>{{.Note}}</td>
-                <td>{{printf "%d&#8209;%d&#8209;%d" (.Timestamp.Year) (.Timestamp.Month) (.Timestamp.Day)}}</td>
+                <td>{{printf "%d-%d-%d" (.Timestamp.Year) (.Timestamp.Month) (.Timestamp.Day)}}</td>
             </tr>
         {{end}}
     {{ end }}
