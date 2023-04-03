@@ -50,3 +50,14 @@ func TestValidation(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, created)
 }
+
+func TestRandomID(t *testing.T) {
+	set := map[string]bool{}
+	for i := 0; i < 10; i++ {
+		id, err := randomID()
+		assert.NoError(t, err)
+		assert.Len(t, id, 8)
+		assert.NotContains(t, set, id)
+		set[id] = true
+	}
+}

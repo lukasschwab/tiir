@@ -14,7 +14,7 @@ import (
 
 const (
 	// idLength for hexadecimal text IDs.
-	idLength = 8
+	idLength = 2 * 2 * 2
 )
 
 // Interface for managing tir texts. Callers should use this in lieu of
@@ -84,7 +84,7 @@ func (s *app) Close() error {
 }
 
 func randomID() (string, error) {
-	bytes := make([]byte, idLength)
+	bytes := make([]byte, idLength/2)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
