@@ -2,79 +2,81 @@
 package tir
 
 import (
-	"crypto/md5"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
-	"io"
-	"log"
 	"time"
 
 	"github.com/lukasschwab/tiir/pkg/store"
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
+const (
+	// idLength for hexadecimal text IDs.
+	idLength = 8
+)
+
 // New constructs a new Service around s.
 func New(s store.Store) *Service {
-	return &Service{Store: s}
+	return &Service{provider: s}
 }
 
 // Service for managing tir texts.
 //
 // TODO: don't expose Service's internals; expose an interface.
 type Service struct {
-	Store store.Store
+	provider store.Store
 }
 
 // Create a text.
 func (s *Service) Create(text *text.Text) (*text.Text, error) {
-	if err := text.Validate(); err != nil {
+	var err error
+	if err = text.Validate(); err != nil {
 		return nil, err
+	} else if text.ID, err = randomID(); err != nil {
+		return nil, fmt.Errorf("couldn't randomize ID: %w", err)
 	}
-
-	text.ID = toID(text)
 	text.Timestamp = time.Now()
 
-	return s.Store.Upsert(text)
+	return s.provider.Upsert(text)
 }
 
 // Read a text by ID.
 func (s *Service) Read(id string) (*text.Text, error) {
-	return s.Store.Read(id)
+	return s.provider.Read(id)
 }
 
 // Update a text by ID and return the resulting text.
 func (s *Service) Update(id string, updates *text.Text) (*text.Text, error) {
-	extant, err := s.Store.Read(id)
+	extant, err := s.provider.Read(id)
 	if err != nil {
 		return nil, fmt.Errorf("error reading old record: %w", err)
 	}
 	// Don't validate: updates can be partial.
 	extant.Integrate(updates)
-	return s.Store.Upsert(extant)
+	return s.provider.Upsert(extant)
 }
 
 // Delete a text by ID and return the deleted text.
 func (s *Service) Delete(id string) (*text.Text, error) {
-	return s.Store.Delete(id)
+	return s.provider.Delete(id)
 }
 
 // List all texts available to the service.
 func (s *Service) List() ([]*text.Text, error) {
 	// TODO; parameterize the sort order.
-	return s.Store.List(text.Timestamps, text.Descending)
+	return s.provider.List(text.Timestamps, text.Descending)
 }
 
 // Close the underlying Store.
 func (s *Service) Close() error {
-	return s.Store.Close()
+	return s.provider.Close()
 }
 
-// NOTE: should this really be random?
-func toID(text *text.Text) string {
-	h := md5.New()
-	for _, elem := range []string{text.Title, text.URL, text.Author, text.Note} {
-		if _, err := io.WriteString(h, elem); err != nil {
-			log.Fatalf("Couldn't hash text element: %v", err)
-		}
+func randomID() (string, error) {
+	bytes := make([]byte, idLength)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
 	}
-	return fmt.Sprintf("%x", h.Sum(nil))[:8]
+	return hex.EncodeToString(bytes), nil
 }
