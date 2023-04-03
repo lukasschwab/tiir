@@ -22,7 +22,7 @@ to quickly create a Cobra application.`,
 		initial := &text.Text{}
 		if final, err := initial.EditWith(cfg.Editor); err != nil {
 			log.Fatalf("couldn't run editor: %v", err)
-		} else if created, err := cfg.Service.Create(final); err != nil {
+		} else if created, err := cfg.App.Create(final); err != nil {
 			log.Fatalf("error comitting new record: %v", err)
 		} else if repr, err := json.MarshalIndent(created, "", "\t"); err != nil {
 			log.Fatalf("error representing created record '%v': %v", created.ID, err)

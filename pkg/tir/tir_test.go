@@ -10,7 +10,7 @@ import (
 )
 
 func TestService(t *testing.T) {
-	assert.Implements(t, (*io.Closer)(nil), new(Service))
+	assert.Implements(t, (*io.Closer)(nil), new(app))
 
 	s := New(store.UseMemory())
 

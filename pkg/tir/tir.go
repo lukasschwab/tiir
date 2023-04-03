@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/lukasschwab/tiir/pkg/store"
@@ -16,20 +17,30 @@ const (
 	idLength = 8
 )
 
-// New constructs a new Service around s.
-func New(s store.Interface) *Service {
-	return &Service{provider: s}
+// Interface for managing tir texts. Callers should use this in lieu of
+// store.Store; the latter assumes application-level validation implemented in
+// this package. See [New].
+type Interface interface {
+	io.Closer
+	Create(text *text.Text) (*text.Text, error)
+	Read(id string) (*text.Text, error)
+	Update(id string, updates *text.Text) (*text.Text, error)
+	Delete(id string) (*text.Text, error)
+	List() ([]*text.Text, error)
 }
 
-// Service for managing tir texts.
-//
-// TODO: don't expose Service's internals; expose an interface.
-type Service struct {
+// New constructs a new Service around s.
+func New(s store.Interface) Interface {
+	return &app{provider: s}
+}
+
+// app for managing tir texts.
+type app struct {
 	provider store.Interface
 }
 
 // Create a text.
-func (s *Service) Create(text *text.Text) (*text.Text, error) {
+func (s *app) Create(text *text.Text) (*text.Text, error) {
 	var err error
 	if err = text.Validate(); err != nil {
 		return nil, err
@@ -42,12 +53,12 @@ func (s *Service) Create(text *text.Text) (*text.Text, error) {
 }
 
 // Read a text by ID.
-func (s *Service) Read(id string) (*text.Text, error) {
+func (s *app) Read(id string) (*text.Text, error) {
 	return s.provider.Read(id)
 }
 
 // Update a text by ID and return the resulting text.
-func (s *Service) Update(id string, updates *text.Text) (*text.Text, error) {
+func (s *app) Update(id string, updates *text.Text) (*text.Text, error) {
 	extant, err := s.provider.Read(id)
 	if err != nil {
 		return nil, fmt.Errorf("error reading old record: %w", err)
@@ -58,17 +69,17 @@ func (s *Service) Update(id string, updates *text.Text) (*text.Text, error) {
 }
 
 // Delete a text by ID and return the deleted text.
-func (s *Service) Delete(id string) (*text.Text, error) {
+func (s *app) Delete(id string) (*text.Text, error) {
 	return s.provider.Delete(id)
 }
 
 // List all texts available to the service.
-func (s *Service) List() ([]*text.Text, error) {
+func (s *app) List() ([]*text.Text, error) {
 	return s.provider.List(text.Timestamps, text.Descending)
 }
 
 // Close the underlying Store.
-func (s *Service) Close() error {
+func (s *app) Close() error {
 	return s.provider.Close()
 }
 

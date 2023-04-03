@@ -49,7 +49,7 @@ var rootCmd = &cobra.Command{
 		return nil
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-		return cfg.Service.Close()
+		return cfg.App.Close()
 	},
 }
 

@@ -149,7 +149,7 @@ func Load() (*Config, error) {
 	if err != nil {
 		return cfg, fmt.Errorf("error generating store: %w", err)
 	}
-	cfg.Service = tir.New(store)
+	cfg.App = tir.New(store)
 
 	// Construct a store.
 	if cfg.Editor, ok = editors[cfg.getEditorType()]; !ok {
@@ -161,9 +161,9 @@ func Load() (*Config, error) {
 
 // Config for a Service and Editor; see [LoadConfig].
 type Config struct {
-	v       *viper.Viper
-	Service *tir.Service
-	Editor  text.Editor
+	v      *viper.Viper
+	App    tir.Interface
+	Editor text.Editor
 }
 
 func (cfg *Config) getStoreType() storeType {
