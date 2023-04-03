@@ -18,13 +18,16 @@ import (
 )
 
 var (
-	listRenderer = map[string]render.Function{
+	// Bodged aliasing for List request render formats. Roughly correspond to
+	// content types.
+	formatRenderers = map[string]render.Function{
 		"json":                  render.JSON,
 		"application/json":      render.JSON,
 		"application/feed+json": render.JSONFeed,
 		"plain":                 render.Plain,
 		"text/plain":            render.Plain,
 		"html":                  render.HTML,
+		"text/html":             render.HTML,
 	}
 )
 
@@ -114,14 +117,33 @@ func main() {
 		return c.Status(fiber.StatusOK).JSON(deleted)
 	})
 
+	rendererKeys := make([]string, 0, len(formatRenderers))
+	for k := range formatRenderers {
+		rendererKeys = append(rendererKeys, k)
+	}
+
 	// List all texts.
 	app.Get("/texts", func(c *fiber.Ctx) error {
-		// FIXME: handle errors.
-		texts, _ := cfg.Service.List()
-		// TODO: look at accept headers, not just a format parameter.
-		renderer := listRenderer[c.Query("format", "html")]
+		texts, err := cfg.Service.List()
+		if err != nil {
+			return fmt.Errorf("error listing texts: %w", err)
+		}
+
+		for _, accepts := range []string{
+			// Prefer an explicitly-requested format in the URL query.
+			c.Query("format"),
+			// Fall back on Accepts header.
+			c.Accepts(rendererKeys...),
+		} {
+			if renderer, ok := formatRenderers[accepts]; ok {
+				c.Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", accepts))
+				return renderer(texts, c)
+			}
+		}
+
+		// Fall back on HTML.
 		c.Set("Content-Type", "text/html; charset=utf-8")
-		return renderer(texts, c)
+		return render.HTML(texts, c)
 	})
 
 	go func() {
