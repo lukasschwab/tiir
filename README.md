@@ -100,6 +100,7 @@ For a read-only public site, can either run the fly.io server with a flag *or* I
 
 + "Hosted" tir; I can post things to tir from a work computer.
 + That means figuring out auth.
++ A parser for copying in a TIR HTML page.
 
 ## More things to learn
 

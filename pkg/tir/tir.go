@@ -47,8 +47,9 @@ func (s *app) Create(text *text.Text) (*text.Text, error) {
 	} else if text.ID, err = randomID(); err != nil {
 		return nil, fmt.Errorf("couldn't randomize ID: %w", err)
 	}
-	text.Timestamp = time.Now()
-
+	if text.Timestamp.IsZero() {
+		text.Timestamp = time.Now()
+	}
 	return s.provider.Upsert(text)
 }
 
