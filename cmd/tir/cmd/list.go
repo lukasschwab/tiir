@@ -45,7 +45,7 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(listCmd)
 
-	rootCmd.PersistentFlags().StringVarP(&output, "output", "o", string(OutputTea), fmt.Sprintf("output format for listed texts (%v)", strings.Join(rendererOptions, ", ")))
+	listCmd.PersistentFlags().StringVarP(&output, "output", "o", string(OutputTea), fmt.Sprintf("output format for listed texts (%v)", strings.Join(rendererOptions, ", ")))
 }
 
 type outputFormat string
