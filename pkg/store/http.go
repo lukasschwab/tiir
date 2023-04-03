@@ -19,7 +19,7 @@ var (
 )
 
 // UseHTTP requests to a remote cmd/server to read and write texts.
-func UseHTTP(baseURL, apiSecret string) (Store, error) {
+func UseHTTP(baseURL, apiSecret string) (Interface, error) {
 	url, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid URL: %w", err)

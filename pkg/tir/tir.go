@@ -17,7 +17,7 @@ const (
 )
 
 // New constructs a new Service around s.
-func New(s store.Store) *Service {
+func New(s store.Interface) *Service {
 	return &Service{provider: s}
 }
 
@@ -25,7 +25,7 @@ func New(s store.Store) *Service {
 //
 // TODO: don't expose Service's internals; expose an interface.
 type Service struct {
-	provider store.Store
+	provider store.Interface
 }
 
 // Create a text.
@@ -64,7 +64,6 @@ func (s *Service) Delete(id string) (*text.Text, error) {
 
 // List all texts available to the service.
 func (s *Service) List() ([]*text.Text, error) {
-	// TODO; parameterize the sort order.
 	return s.provider.List(text.Timestamps, text.Descending)
 }
 

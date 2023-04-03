@@ -6,9 +6,9 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-// Store texts somewhere. An initialized store must be closed: call or defer
-// (Store).Close.
-type Store interface {
+// Interface for storing texts somewhere. An initialized store must be closed:
+// call or defer (Interface).Close.
+type Interface interface {
 	// Close closes the Store, rendering it unusable for future operations.
 	io.Closer
 	// Read a text by ID.

@@ -70,8 +70,8 @@ const (
 
 // Enum-option to value lookups.
 var (
-	storeFactories = map[storeType]func(*Config) (store.Store, error){
-		StoreTypeFile: func(*Config) (store.Store, error) {
+	storeFactories = map[storeType]func(*Config) (store.Interface, error){
+		StoreTypeFile: func(*Config) (store.Interface, error) {
 			filepath := viper.GetString(KeyFileStoreLocation)
 			if filepath == "" {
 				return nil, errors.New("must provide filepath for file store")
@@ -79,11 +79,11 @@ var (
 			log.Printf("Using file store: %v", filepath)
 			return store.UseFile(filepath)
 		},
-		StoreTypeMemory: func(*Config) (store.Store, error) {
+		StoreTypeMemory: func(*Config) (store.Interface, error) {
 			log.Printf("Using memory store")
 			return store.UseMemory(), nil
 		},
-		StoreTypeHTTP: func(cfg *Config) (store.Store, error) {
+		StoreTypeHTTP: func(cfg *Config) (store.Interface, error) {
 			baseURL := viper.GetString(KeyHTTPStoreBaseURL)
 			if baseURL == "" {
 				return nil, errors.New("must provide base URL for HTTP store")

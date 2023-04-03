@@ -25,7 +25,6 @@ func (v vimEditor) Update(initial *text.Text) (final *text.Text, err error) {
 	}
 	defer os.Remove(f.Name())
 
-	// TODO: filter down to just the editable fields.
 	bytes, err := json.MarshalIndent(editable(*initial), "", "\t")
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling stored text: %w", err)

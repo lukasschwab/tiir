@@ -14,7 +14,7 @@ import (
 // it's created and initialized to an empty store.
 //
 // If you don't call (*File).Close, the underlying [os.File] won't be closed.
-func UseFile(path string) (Store, error) {
+func UseFile(path string) (Interface, error) {
 	return useFile(path)
 }
 

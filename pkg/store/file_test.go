@@ -9,7 +9,7 @@ import (
 )
 
 func TestUseFile(t *testing.T) {
-	assert.Implements(t, (*Store)(nil), &file{})
+	assert.Implements(t, (*Interface)(nil), &file{})
 
 	db, err := os.CreateTemp(t.TempDir(), "*.json")
 	assert.NoError(t, err)

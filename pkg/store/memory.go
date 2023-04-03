@@ -12,7 +12,7 @@ import (
 // Because it doesn't persist texts after the program terminates, memory stores
 // are best suited for testing and for intermediate formats used by other
 // Stores.
-func UseMemory(initialTexts ...*text.Text) Store {
+func UseMemory(initialTexts ...*text.Text) Interface {
 	return useMemory(initialTexts...)
 }
 
