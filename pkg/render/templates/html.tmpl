@@ -32,7 +32,11 @@
             text-align: center;
         }
 
-        /* HORIZONTAL RULE BLOCK */
+        /* Bodge: don't wrap dates. */
+        table tbody tr td:nth-child(4) {
+            white-space: nowrap;
+        }
+
         hr {
             height: 2px;
             background-color: #0074D9;
