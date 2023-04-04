@@ -11,12 +11,8 @@ import (
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete your record of a text you read",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Long: `Delete a tir record by ID in the configured store. For store and editor options,
+see tir --help.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if deleted, err := cfg.App.Delete(specifiedTextID); err != nil {
 			log.Fatalf("error deleting record: %v", err)

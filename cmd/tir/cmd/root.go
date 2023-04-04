@@ -36,7 +36,22 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "tir",
 	Short: "Log what you read",
-	Long:  `tir ('Today I Read...') is a tool for logging the articles you read.`,
+	Long: `tir ('Today I Read...') is a tool for logging the articles you read.
+
+By default, it writes a JSON collection to $HOME/.tir.json, with an interactive
+CLI for adding new readings.
+
+Store readings elsewhere by specifying an alternate --store:
+
++ 'file' (default): a local JSON file. Optionally uses --file-location.
++ 'http': a hosted tir service. Requires --base-url; some hosted services will
+  also require --api-secret.
++ 'memory': an in-memory store that doesn't persist data between calls.
+
+Specify an editor for creating and updating records:
+
++ 'tea' (default): interactive CLI.
++ 'vim': open the record in a temporary file in vim.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		if !verbose {
 			log.SetOutput(io.Discard)
@@ -70,7 +85,7 @@ func init() {
 	viper.BindPFlag(config.KeyStoreType, rootCmd.PersistentFlags().Lookup(flagStore))
 
 	flagFileLocation := "file-location"
-	rootCmd.PersistentFlags().String(flagFileLocation, "$HOME/.tir.json", "if store is 'file,' specifies file to use")
+	rootCmd.PersistentFlags().String(flagFileLocation, "$HOME/.tir.json", "when store is 'file,' specifies file to use")
 	viper.BindPFlag(config.KeyFileStoreLocation, rootCmd.PersistentFlags().Lookup(flagFileLocation))
 
 	flagBaseURL := "base-url"

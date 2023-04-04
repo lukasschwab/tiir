@@ -9,14 +9,11 @@ import (
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Update your record of a text you read",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:     "update",
+	Aliases: []string{"edit"},
+	Short:   "Update your record of a text you read",
+	Long: `Update a tir record by ID in the configured store. For store and editor options,
+see tir --help.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if initial, err := cfg.App.Read(specifiedTextID); err != nil {
 			log.Fatalf("text not found for ID: '%v'", specifiedTextID)
