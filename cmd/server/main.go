@@ -48,6 +48,46 @@ func main() {
 		Validator: validator(apiSecret),
 	}))
 
+	rendererKeys := make([]string, 0, len(formatRenderers))
+	for k := range formatRenderers {
+		rendererKeys = append(rendererKeys, k)
+	}
+
+	// List all texts.
+	app.Get("/texts", func(c *fiber.Ctx) error {
+		texts, err := cfg.App.List()
+		if err != nil {
+			return fmt.Errorf("error listing texts: %w", err)
+		}
+
+		for _, accepts := range []string{
+			// Prefer an explicitly-requested format in the URL query.
+			c.Query("format"),
+			// Fall back on Accepts header.
+			c.Accepts(rendererKeys...),
+		} {
+			if renderer, ok := formatRenderers[accepts]; ok {
+				c.Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", accepts))
+				return renderer(texts, c)
+			}
+		}
+
+		// Fall back on HTML.
+		c.Set("Content-Type", "text/html; charset=utf-8")
+		return render.HTML(texts, c)
+	})
+
+	// Dedicated route for the JSON feed.
+	app.Get("/texts/feed.json", func(c *fiber.Ctx) error {
+		texts, err := cfg.App.List()
+		if err != nil {
+			return fmt.Errorf("error listing texts: %w", err)
+		}
+
+		c.Set("Content-Type", "application/feed+json; charset=utf-8")
+		return render.JSONFeed(texts, c)
+	})
+
 	// Create text.
 	app.Post("/texts", func(c *fiber.Ctx) error {
 		t := new(text.Text)
@@ -63,6 +103,7 @@ func main() {
 		return c.Status(fiber.StatusCreated).JSON(created)
 	})
 
+	// Get text by ID.
 	app.Get("/texts/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		if id == "" {
@@ -115,35 +156,6 @@ func main() {
 			return fmt.Errorf("error deleting record: %w", err)
 		}
 		return c.Status(fiber.StatusOK).JSON(deleted)
-	})
-
-	rendererKeys := make([]string, 0, len(formatRenderers))
-	for k := range formatRenderers {
-		rendererKeys = append(rendererKeys, k)
-	}
-
-	// List all texts.
-	app.Get("/texts", func(c *fiber.Ctx) error {
-		texts, err := cfg.App.List()
-		if err != nil {
-			return fmt.Errorf("error listing texts: %w", err)
-		}
-
-		for _, accepts := range []string{
-			// Prefer an explicitly-requested format in the URL query.
-			c.Query("format"),
-			// Fall back on Accepts header.
-			c.Accepts(rendererKeys...),
-		} {
-			if renderer, ok := formatRenderers[accepts]; ok {
-				c.Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", accepts))
-				return renderer(texts, c)
-			}
-		}
-
-		// Fall back on HTML.
-		c.Set("Content-Type", "text/html; charset=utf-8")
-		return render.HTML(texts, c)
 	})
 
 	go func() {
