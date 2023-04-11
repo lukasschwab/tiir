@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/lukasschwab/tiir/pkg/text"
@@ -21,7 +22,9 @@ func useMemory(initialTexts ...*text.Text) *Memory {
 		texts: make(map[string]*text.Text),
 	}
 	for _, t := range initialTexts {
-		m.Upsert(t)
+		if _, err := m.Upsert(t); err != nil {
+			log.Printf("ignoring error upserting initial text '%v': %v", t.ID, err)
+		}
 	}
 	return m
 }

@@ -30,6 +30,12 @@ var (
 		string(config.EditorTypeVim),
 		string(config.EditorTypeTea),
 	}
+
+	// specifiedTextID set for update and delete commands.
+	specifiedTextID string
+
+	// verbose set by --verbose flag.
+	verbose bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -82,20 +88,40 @@ func init() {
 
 	flagStore := "store"
 	rootCmd.PersistentFlags().StringP(flagStore, "s", "file", fmt.Sprintf("store to use (%v)", strings.Join(storeOptions, ", ")))
-	viper.BindPFlag(config.KeyStoreType, rootCmd.PersistentFlags().Lookup(flagStore))
+	bindPFlag(config.KeyStoreType, flagStore)
 
 	flagFileLocation := "file-location"
 	rootCmd.PersistentFlags().String(flagFileLocation, "$HOME/.tir.json", "when store is 'file,' specifies file to use")
-	viper.BindPFlag(config.KeyFileStoreLocation, rootCmd.PersistentFlags().Lookup(flagFileLocation))
+	bindPFlag(config.KeyFileStoreLocation, flagFileLocation)
 
 	flagBaseURL := "base-url"
 	rootCmd.PersistentFlags().String(flagBaseURL, "", "when store is 'http,' specifies service URL to use")
-	viper.BindPFlag(config.KeyHTTPStoreBaseURL, rootCmd.PersistentFlags().Lookup(flagBaseURL))
+	bindPFlag(config.KeyHTTPStoreBaseURL, flagBaseURL)
 	flagAPISecret := "api-secret"
 	rootCmd.PersistentFlags().String(flagAPISecret, "", "when store is 'http,' specifies API secret to authorize requests")
-	viper.BindPFlag(config.KeyHTTPStoreAPISecret, rootCmd.PersistentFlags().Lookup(flagAPISecret))
+	bindPFlag(config.KeyHTTPStoreAPISecret, flagAPISecret)
 
 	flagEditor := "editor"
 	rootCmd.PersistentFlags().StringP(flagEditor, "e", "tea", fmt.Sprintf("editor to use (%v)", strings.Join(editorOptions, ", ")))
-	viper.BindPFlag(config.KeyEditor, rootCmd.PersistentFlags().Lookup(flagEditor))
+	bindPFlag(config.KeyEditor, flagEditor)
+}
+
+// bindPFlag in viper specified by configKey to the persistent cobra flag with
+// flagName.
+func bindPFlag(configKey, flagName string) {
+	if err := viper.BindPFlag(
+		configKey,
+		rootCmd.PersistentFlags().Lookup(flagName),
+	); err != nil {
+		log.Fatalf("Error binding viper flag: %v", err)
+	}
+}
+
+// requireID requires a standard ID parameter identifying an extant record.
+func requireID(cmd *cobra.Command) {
+	const flagID = "id"
+	cmd.PersistentFlags().StringVar(&specifiedTextID, flagID, "", fmt.Sprintf("The record to %v.", cmd.Name()))
+	if err := cmd.MarkPersistentFlagRequired(flagID); err != nil {
+		log.Fatalf("Error marking %v flag required: %v", flagID, err)
+	}
 }

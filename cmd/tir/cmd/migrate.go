@@ -48,8 +48,11 @@ from legacy tir. It's recommended you migrate with the
 func init() {
 	rootCmd.AddCommand(migrateCmd)
 
-	migrateCmd.PersistentFlags().StringVarP(&fromFilename, "from", "f", "", "filepath for HTML to migrate")
-	migrateCmd.MarkPersistentFlagRequired("from")
+	const flagFrom = "from"
+	migrateCmd.PersistentFlags().StringVarP(&fromFilename, flagFrom, "f", "", "filepath for HTML to migrate")
+	if err := migrateCmd.MarkPersistentFlagRequired(flagFrom); err != nil {
+		log.Fatalf("Error marking %v flag required: %v", flagFrom, err)
+	}
 }
 
 // NewParser constructs a new BrittleParser for f without parsing it. See

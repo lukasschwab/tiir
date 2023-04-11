@@ -199,6 +199,8 @@ func (cfg *Config) getEditorType() editorType {
 // (TIR_STORE.API_SECRET), hence the TIR_API_SECRET alias.
 func (cfg *Config) GetAPISecret() string {
 	cfg.v.SetEnvKeyReplacer(strings.NewReplacer("STORE.", ""))
-	cfg.v.BindEnv(KeyHTTPStoreAPISecret)
+	if err := cfg.v.BindEnv(KeyHTTPStoreAPISecret); err != nil {
+		log.Printf("ignoring error binding %v: %v", KeyHTTPStoreAPISecret, err)
+	}
 	return cfg.v.GetString(KeyHTTPStoreAPISecret)
 }

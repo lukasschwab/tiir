@@ -116,8 +116,7 @@ func main() {
 			// BODGE: assume the text wasn't found. Makes upsert-adaptation in
 			// store.http easier.
 			log.Printf("error getting record: %v", err)
-			c.SendStatus(fiber.StatusNotFound)
-			return nil
+			return c.SendStatus(fiber.StatusNotFound)
 		}
 		return c.Status(fiber.StatusOK).JSON(t)
 	})
