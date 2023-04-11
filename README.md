@@ -1,4 +1,4 @@
-# tiir ![golangci-lint status](https://github.com/lukasschwab/tiir/actions/workflows/go.yml/badge.svg?branch=main)
+# tiir [![Go Reference](https://pkg.go.dev/badge/github.com/lukasschwab/tiir.svg)](https://pkg.go.dev/github.com/lukasschwab/tiir) ![golangci-lint status](https://github.com/lukasschwab/tiir/actions/workflows/go.yml/badge.svg?branch=main)
 
 
 A flexible successor to [tir](https://github.com/lukasschwab/tir):
