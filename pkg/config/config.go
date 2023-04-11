@@ -1,3 +1,15 @@
+// Package config loads a tir configuration, either from a JSON file
+// (e.g. $HOME/.tir.config), from command-line arguments if the config variables
+// are bound with [viper.BindPFlag], or from environment variables (though the
+// latter are not explicitly supported).
+//
+// Loading a [Config] generates a [tir.Interface] for interacting with the
+// configured store and a [text.Editor] for getting user input.
+//
+// # Defaults
+//
+// In the absence of explicit configuration, [Load] yields a [Config] backed by
+// a [store.File] store pointing at $HOME/.tir.json and an [edit.Tea] editor.
 package config
 
 import (
@@ -14,16 +26,18 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Values providable via a JSON config file. For example, this configures tir to
-// use a file store rooted at /Users/me/.tir.json and the Tea editor:
+// Values providable via a JSON config file. For example, this .tir.config file
+// configures tir to use a file store rooted at /Users/me/.tir.json and the Tea
+// editor:
 //
 //	{ "store": { "type": "file", "path": "/Users/me/.tir.json" }, "editor": "tea" }
 //
-// This configures tir to talk to a server at tir.example.com:
+// For comparison, this .tir.config file configures tir to talk to a server at
+// tir.example.com:
 //
 //	{ "store": { "type": "http", "base_url": "https://tir.example.com", "api_secret": "YOUR_SECRET" } }
 //
-// For info on where tir looks for a config, see [LoadConfig]. For info about
+// For info on where tir looks for a config, see [Load]. For info about
 // how to provide configuration, see [viper].
 //
 // [viper]: https://github.com/spf13/viper
@@ -49,7 +63,8 @@ const (
 
 type storeType string
 
-// Values for the store.type config variable.
+// Possible values for the store.type config variable. Providing any other store
+// type value will cause [Load] to fail.
 const (
 	// StoreTypeFile selects the store.file store (default).
 	StoreTypeFile storeType = "file"
@@ -61,7 +76,8 @@ const (
 
 type editorType string
 
-// Values for the editor config variable.
+// Possible values for the editor config variable. Providing any other editor
+// value will cause [Load] to fail.
 const (
 	// EditorTypeVim selects the edit.Vim editor.
 	EditorTypeVim editorType = "vim"
@@ -110,10 +126,10 @@ var (
 // variables, or through command-line arguments with the appropriate viper
 // bindings.
 //
-// + The default Service is backed by a file at $HOME/.tir.json.
-// + The default text.Editor is edit.Tea.
+// The default [tir.Interface] is backed by a file at $HOME/.tir.json. The
+// default [text.Editor] is [edit.Tea].
 //
-// The caller is responsible for calling (Config).Service.Close() appropriately.
+// The caller is responsible for calling [tir.Interface.Close] appropriately.
 func Load() (*Config, error) {
 	viper.SetEnvPrefix("tir")
 	viper.SetConfigName(".tir.config")
@@ -160,7 +176,8 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// Config for a Service and Editor; see [LoadConfig].
+// Config for a Service and Editor. Use [Load] to construct a Config that
+// respects the [viper]-provided user configuration environment.
 type Config struct {
 	v      *viper.Viper
 	App    tir.Interface
@@ -175,13 +192,12 @@ func (cfg *Config) getEditorType() editorType {
 	return editorType(cfg.v.GetString(KeyEditor))
 }
 
-// GetAPISecret provided to cfg or the env variable TIR_API_SECRET.
+// GetAPISecret provided through [viper] or the env variable TIR_API_SECRET if
+// it's present.
+//
+// The standard post-prefixing key for this value is unwieldy
+// (TIR_STORE.API_SECRET), hence the TIR_API_SECRET alias.
 func (cfg *Config) GetAPISecret() string {
-	// BODGE: relocate or refactor this. The server gets its API secret from an
-	// environment variable, but the standard post-prefixing key is pretty bad:
-	// `TIR_STORE.API_SECRET`.
-	//
-	// Can undo this change to revert to that format.
 	cfg.v.SetEnvKeyReplacer(strings.NewReplacer("STORE.", ""))
 	cfg.v.BindEnv(KeyHTTPStoreAPISecret)
 	return cfg.v.GetString(KeyHTTPStoreAPISecret)

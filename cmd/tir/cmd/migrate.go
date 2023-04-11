@@ -1,6 +1,3 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -55,6 +52,8 @@ func init() {
 	migrateCmd.MarkPersistentFlagRequired("from")
 }
 
+// NewParser constructs a new BrittleParser for f without parsing it. See
+// [BrittleParser.Parse].
 func NewParser(f *os.File) (*BrittleParser, error) {
 	doc, err := goquery.NewDocumentFromReader(f)
 	if err != nil {

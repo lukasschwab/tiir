@@ -8,7 +8,7 @@ import (
 )
 
 func TestUseMemory(t *testing.T) {
-	assert.Implements(t, (*Interface)(nil), &memory{})
+	assert.Implements(t, (*Interface)(nil), &Memory{})
 
 	m := UseMemory()
 	someText := &text.Text{ID: "some-id"}

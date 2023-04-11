@@ -1,5 +1,5 @@
-// Package text is the core data model: it's a text you read. Everything else is
-// managing texts.
+// Package text is the core data model: it's a text you read (past tense).
+// All the other packages in this module modify or manage texts.
 package text
 
 import (
@@ -17,7 +17,12 @@ type Text struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// Validate t is a sufficient text: user has provided all required fields.
+// Validate t has nonzero values for all required fields:
+//
+//   - Title
+//   - Author
+//   - Note
+//   - URL
 func (t *Text) Validate() error {
 	switch "" {
 	case t.Title:
@@ -39,12 +44,15 @@ func (t *Text) EditWith(e Editor) (final *Text, err error) {
 }
 
 // Editor for text. Update returns user updates to initial; it may modify
-// initial in place, but that behavior isn't guaranteed.
+// initial in place, but that behavior isn't guaranteed. See implementations in
+// [pkg/edit].
 type Editor interface {
 	Update(initial *Text) (final *Text, err error)
 }
 
-// Integrate updates into t in-place.
+// Integrate updates into t in-place, skipping zero-value update fields (empty-
+// string authors, for example) and non-user-editable fields (e.g.
+// Timestamp).
 func (t *Text) Integrate(updates *Text) {
 	if updates.Author != "" {
 		t.Author = updates.Author

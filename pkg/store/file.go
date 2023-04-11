@@ -10,45 +10,41 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-// UseFile uses the file at path as a JSON store. If the file doesn't exist,
-// it's created and initialized to an empty store.
+// UseFile at path as a JSON store. If the file doesn't exist, it's created and
+// initialized to an empty store.
 //
-// If you don't call (*File).Close, the underlying [os.File] won't be closed.
+// If you don't call [File.Close], the underlying [os.File] won't be closed.
 func UseFile(path string) (Interface, error) {
 	return useFile(path)
 }
 
-func useFile(path string) (*file, error) {
+func useFile(path string) (*File, error) {
 	db, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %w", err)
 	}
-	f := &file{db: db}
+	f := &File{db: db}
 	if err := f.load(); err != nil {
 		return nil, fmt.Errorf("can't parse file contents: %w", err)
 	}
 	return f, nil
 }
 
-// file implementation of Store.
+// File implements [Interface]; see [UseFile].
 //
 // Loads all texts from the underlying os.File into a memory store as an
 // intermediate form for each operation; most of the store logic is delegated to
 // the memory implementation.
-//
-// NOTE: simultaneous writes, e.g. from simultaneous HTTP requests, can yield
-// unexpected behavior: every write overwrites the full file. This could be
-// improved by persisting a centralized `memory` here to consolidate writes.
-type file struct {
+type File struct {
 	// Mutex for file handle operations.
 	sync.Mutex
 	db *os.File
 
-	cache *memory
+	cache *Memory
 }
 
 // parse all records in f into memory.
-func (f *file) load() error {
+func (f *File) load() error {
 	f.Lock()
 	defer f.Unlock()
 
@@ -65,12 +61,12 @@ func (f *file) load() error {
 		return fmt.Errorf("couldn't parse file JSON: %w", err)
 	}
 
-	f.cache = &memory{texts: *result}
+	f.cache = &Memory{texts: *result}
 	return nil
 }
 
 // commit all records in memory to the underlying file. Overwrites everything.
-func (f *file) commit() error {
+func (f *File) commit() error {
 	f.Lock()
 	defer f.Unlock()
 
@@ -86,13 +82,13 @@ func (f *file) commit() error {
 	return nil
 }
 
-// Read implements Store.
-func (f *file) Read(id string) (*text.Text, error) {
+// Read implements [Interface].
+func (f *File) Read(id string) (*text.Text, error) {
 	return f.cache.Read(id)
 }
 
-// Upsert implements Store.
-func (f *file) Upsert(t *text.Text) (*text.Text, error) {
+// Upsert implements [Interface].
+func (f *File) Upsert(t *text.Text) (*text.Text, error) {
 	t, err := f.cache.Upsert(t)
 	if err != nil {
 		return nil, err
@@ -102,8 +98,8 @@ func (f *file) Upsert(t *text.Text) (*text.Text, error) {
 	return t, nil
 }
 
-// Delete implements Store.
-func (f *file) Delete(id string) (*text.Text, error) {
+// Delete implements [Interface].
+func (f *File) Delete(id string) (*text.Text, error) {
 	t, err := f.cache.Delete(id)
 	if err != nil {
 		return nil, err
@@ -113,12 +109,12 @@ func (f *file) Delete(id string) (*text.Text, error) {
 	return t, nil
 }
 
-// List implements Store.
-func (f *file) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
+// List implements [Interface].
+func (f *File) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
 	return f.cache.List(c, d)
 }
 
-// Close implements Store.
-func (f *file) Close() error {
+// Close implements [Interface].
+func (f *File) Close() error {
 	return f.db.Close()
 }

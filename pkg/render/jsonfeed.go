@@ -9,7 +9,26 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-// JSONFeed rendering for texts.
+// JSONFeed rendering for texts. Example output:
+//
+//	{
+//		"version": "https://jsonfeed.org/version/1",
+//		"title": "tir",
+//		"items": [
+//			{
+//				"id": "35bb8126",
+//				"url": "https://davidchall.github.io/ggip/articles/visualizing-ip-data.html",
+//				"title": "Visualizing IP data",
+//				"content_text": "Use a Hilbert Curve: efficient 2D packing that keeps consecutive sequences spatially contiguous.",
+//				"date_published": "2023-04-07T21:43:52-07:00",
+//				"authors": [
+//	 				{
+//						"name": "David Hall"
+//					}
+//				]
+//			}
+//		]
+//	}
 func JSONFeed(texts []*text.Text, to io.Writer) error {
 	items := make([]jsonfeed.Item, len(texts))
 	for i, text := range texts {

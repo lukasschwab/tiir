@@ -1,3 +1,10 @@
+// Package store stores a [text.Text] collection somewhere. Typically, use the
+// [github.com/lukasschwab/tiir/pkg/tir.Interface] provided by
+// [github.com/lukasschwab/tiir/pkg/config.Load], rather than constructing a
+// store directly, to use the user-configured store.
+//
+// An initialized store must be closed: call Close when you're done
+// writing to the [Interface].
 package store
 
 import (
@@ -7,9 +14,9 @@ import (
 )
 
 // Interface for storing texts somewhere. An initialized store must be closed:
-// call or defer (Interface).Close.
+// call Close when you're done writing to the store.
 type Interface interface {
-	// Close closes the Store, rendering it unusable for future operations.
+	// Close the Store, rendering it unusable for future operations.
 	io.Closer
 	// Read a text by ID.
 	Read(id string) (*text.Text, error)

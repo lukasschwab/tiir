@@ -12,7 +12,7 @@ import (
 // TODO: can we support the user's preferred editor without launching an
 // arbitrary application?
 
-// Vim editor for texts. Uses a temporary file for every Update call.
+// Vim-based [text.Editor]. Uses a temporary file for every Update call.
 const Vim vimEditor = iota
 
 type vimEditor int

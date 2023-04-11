@@ -16,8 +16,8 @@ func UseMemory(initialTexts ...*text.Text) Interface {
 	return useMemory(initialTexts...)
 }
 
-func useMemory(initialTexts ...*text.Text) *memory {
-	m := &memory{
+func useMemory(initialTexts ...*text.Text) *Memory {
+	m := &Memory{
 		texts: make(map[string]*text.Text),
 	}
 	for _, t := range initialTexts {
@@ -26,14 +26,14 @@ func useMemory(initialTexts ...*text.Text) *memory {
 	return m
 }
 
-// memory implementation of Store.
-type memory struct {
+// Memory implements [Interface] in-memory. See [UseMemory].
+type Memory struct {
 	sync.RWMutex
 	texts map[string]*text.Text
 }
 
-// Read implements Store.
-func (m *memory) Read(id string) (*text.Text, error) {
+// Read implements [Interface].
+func (m *Memory) Read(id string) (*text.Text, error) {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -44,8 +44,8 @@ func (m *memory) Read(id string) (*text.Text, error) {
 	return text, nil
 }
 
-// Upsert implements Store.
-func (m *memory) Upsert(t *text.Text) (*text.Text, error) {
+// Upsert implements [Interface].
+func (m *Memory) Upsert(t *text.Text) (*text.Text, error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -53,8 +53,8 @@ func (m *memory) Upsert(t *text.Text) (*text.Text, error) {
 	return t, nil
 }
 
-// Delete implements Store.
-func (m *memory) Delete(id string) (*text.Text, error) {
+// Delete implements [Interface].
+func (m *Memory) Delete(id string) (*text.Text, error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -67,8 +67,8 @@ func (m *memory) Delete(id string) (*text.Text, error) {
 	return text, nil
 }
 
-// List implements Store.
-func (m *memory) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
+// List implements [Interface].
+func (m *Memory) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
 	texts := make([]*text.Text, 0, len(m.texts))
 	for _, t := range m.texts {
 		texts = append(texts, t)
@@ -78,7 +78,7 @@ func (m *memory) List(c text.Comparator, d text.Direction) ([]*text.Text, error)
 	return texts, nil
 }
 
-// Close implements Store.
-func (m *memory) Close() error {
+// Close implements [Interface].
+func (m *Memory) Close() error {
 	return nil
 }

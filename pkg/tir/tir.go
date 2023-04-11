@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	// idLength for hexadecimal text IDs.
-	idLength = 2 * 2 * 2
+	// IDLength for hexadecimal text IDs.
+	IDLength = 2 * 2 * 2
 )
 
 // Interface for managing tir texts. Callers should use this in lieu of
@@ -22,14 +22,23 @@ const (
 // this package. See [New].
 type Interface interface {
 	io.Closer
-	Create(text *text.Text) (*text.Text, error)
+	// Create a new text. This function is responsible for assigning
+	// [text.Text.ID] and [text.Text.Timestamp].
+	Create(new *text.Text) (*text.Text, error)
+	// Read a text by its ID.
 	Read(id string) (*text.Text, error)
+	// Update a text with ID to include updates. Zero-valued fields in updates
+	// (e.g. empty-string fields) are ignored.
 	Update(id string, updates *text.Text) (*text.Text, error)
+	// Delete a text by its ID.
 	Delete(id string) (*text.Text, error)
+	// List all texts sorted by decreasing [text.Text.Timestamp].
 	List() ([]*text.Text, error)
 }
 
-// New constructs a new Service around s.
+// New constructs a new application [Interface] around s. In general, use
+// [github.com/lukasschwab/tiir/pkg/config.Load] instead to respect user
+// configuration.
 func New(s store.Interface) Interface {
 	return &app{provider: s}
 }
@@ -85,7 +94,7 @@ func (s *app) Close() error {
 }
 
 func randomID() (string, error) {
-	bytes := make([]byte, idLength/2)
+	bytes := make([]byte, IDLength/2)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}

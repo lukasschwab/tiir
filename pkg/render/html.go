@@ -13,8 +13,34 @@ import (
 //go:embed templates/html.tmpl
 var htmlTemplate string
 
-// HTML table rednering for texts, grouped by their Timestamp date. HTML assumes
-// texts are sorted by Timestamp, Descending; see [text.Sort].
+// HTML table rendering for texts, grouped by [text.Text.Timestamp]. HTML
+// assumes texts it receives are already ordered by timestamp, descending; see
+// [text.Sort].
+//
+// Example output:
+//
+//	<head>
+//		<!-- Head contents... -->
+//	</head>
+//	<h1 class="title">tir</h1>
+//	<p><a href="https://github.com/lukasschwab/tiir">GitHub</a></p>
+//	<hr/>
+//	<table class="table">
+//		<tr>
+//			<th>Title</th>
+//			<th>Author</th>
+//			<th>Note</th>
+//			<th>Date</th>
+//		</tr>
+//		<td colspan="4"><h3>April 7, 2023</h3></td>
+//		<tr>
+//			<td><a href="https://davidchall.github.io/ggip/articles/visualizing-ip-data.html">Visualizing IP data</a></td>
+//			<td>David Hall</td>
+//			<td>Use a Hilbert Curve: efficient 2D packing that keeps consecutive sequences spatially contiguous.</td>
+//			<td>2023-04-07</td>
+//		</tr>
+//		<!-- More rows... -->
+//	</table>
 func HTML(texts []*text.Text, to io.Writer) error {
 	tmpl, err := template.New("html").Parse(htmlTemplate)
 	if err != nil {

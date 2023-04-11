@@ -2,7 +2,7 @@ package text
 
 import "sort"
 
-// Sort these texts.
+// Sort these texts in-place by calling [Sort.By].
 type Sort []*Text
 
 // By the provided comparator and direction, sort the texts in s in place.

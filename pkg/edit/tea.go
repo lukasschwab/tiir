@@ -10,7 +10,7 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
-// Tea based text.Editor for the command line..
+// Tea-based [text.Editor] for the command line..
 const Tea teaEditor = iota
 
 type teaEditor int

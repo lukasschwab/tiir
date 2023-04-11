@@ -18,28 +18,30 @@ var (
 	errNotFound = errors.New("not found")
 )
 
-// UseHTTP requests to a remote cmd/server to read and write texts.
+// UseHTTP requests to a remote [github.com/lukasschwab/tiir/cmd/server]
+// instance (hosted at baseURL, accepting secret apiSecret) to read and write
+// texts.
 func UseHTTP(baseURL, apiSecret string) (Interface, error) {
 	url, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid URL: %w", err)
 	}
-	return &httpStore{baseURL: url, apiSecret: apiSecret}, nil
+	return &HTTP{baseURL: url, apiSecret: apiSecret}, nil
 }
 
-// httpStore implements Store for a remote cmd/server process.
+// HTTP implements [Interface] for a remote cmd/server process. See [UseHTTP].
 //
 // NOTE: if we had a proto-defined service, this would probably wrap that (and
 // the generated code would determine the inner values necessary to specify and
 // connect). As it is, this mirrors the routes and renderers exposed by
-// cmd/server; these are hidden dependencies!
-type httpStore struct {
+// [github.com/lukasschwab/tiir/cmd/server]; these are hidden dependencies!
+type HTTP struct {
 	baseURL   *url.URL
 	apiSecret string
 }
 
 // newRequest wraps http.NewRequest for requests rooted at h.baseURL.
-func (h *httpStore) newRequest(method string, body io.Reader, path ...string) (*http.Request, error) {
+func (h *HTTP) newRequest(method string, body io.Reader, path ...string) (*http.Request, error) {
 	requestURL := h.baseURL.JoinPath(path...).String()
 	req, err := http.NewRequest(method, requestURL, body)
 	if err != nil {
@@ -63,8 +65,8 @@ func checkStatus(resp *http.Response) error {
 	return nil
 }
 
-// Read implements Store.
-func (h *httpStore) Read(id string) (*text.Text, error) {
+// Read implements [Interface].
+func (h *HTTP) Read(id string) (*text.Text, error) {
 	req, err := h.newRequest(http.MethodGet, nil, "texts", id)
 	if err != nil {
 		return nil, fmt.Errorf("error building request: %w", err)
@@ -89,10 +91,10 @@ func (h *httpStore) Read(id string) (*text.Text, error) {
 	return result, nil
 }
 
-// Upsert implements Store. It reads before writing to decide whether to call
+// Upsert implements [Interface]. It reads before writing to decide whether to call
 // the server's POST route or its PATCH route, since cmd/server doesn't expose
 // an upsert route.
-func (h *httpStore) Upsert(t *text.Text) (*text.Text, error) {
+func (h *HTTP) Upsert(t *text.Text) (*text.Text, error) {
 	marshaled, err := json.Marshal(t)
 	if err != nil {
 		return nil, fmt.Errorf("error encoding text: %w", err)
@@ -133,8 +135,8 @@ func (h *httpStore) Upsert(t *text.Text) (*text.Text, error) {
 	return result, nil
 }
 
-// Delete implements Store.
-func (h *httpStore) Delete(id string) (*text.Text, error) {
+// Delete implements [Interface].
+func (h *HTTP) Delete(id string) (*text.Text, error) {
 	req, err := h.newRequest(http.MethodDelete, nil, "texts", id)
 	if err != nil {
 		return nil, fmt.Errorf("error building request: %w", err)
@@ -157,8 +159,8 @@ func (h *httpStore) Delete(id string) (*text.Text, error) {
 	return result, nil
 }
 
-// List implements Store. It re-sorts the response accoding to c and d.
-func (h *httpStore) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
+// List implements [Interface]. It re-sorts the response accoding to c and d.
+func (h *HTTP) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
 	req, err := h.newRequest(http.MethodGet, nil, "texts")
 	if err != nil {
 		return nil, fmt.Errorf("error building request: %w", err)
@@ -186,7 +188,7 @@ func (h *httpStore) List(c text.Comparator, d text.Direction) ([]*text.Text, err
 	return result, nil
 }
 
-// Close implements Store.
-func (h *httpStore) Close() error {
+// Close implements [Interface].
+func (h *HTTP) Close() error {
 	return nil
 }
