@@ -157,6 +157,8 @@ func main() {
 		return c.Status(fiber.StatusOK).JSON(deleted)
 	})
 
+	app.Static("/static", "./static")
+
 	go func() {
 		if err := app.Listen(":8080"); err != nil {
 			log.Fatalf("shutting down: %v", err)
