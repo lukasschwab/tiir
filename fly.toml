@@ -9,6 +9,8 @@ processes = []
 [build]
   builder = "paketobuildpacks/builder:base"
   buildpacks = ["gcr.io/paketo-buildpacks/go"]
+  [build.args]
+    BP_KEEP_FILES="./static/*"
 
 [env]
   PORT = "8080"
