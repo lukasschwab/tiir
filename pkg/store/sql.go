@@ -164,11 +164,16 @@ func (s SQL) Upsert(t *text.Text) (*text.Text, error) {
 	}
 
 	// NOTE: this re-read should really be superfluous.
-	if t, err = scanText(tx.QueryRowContext(ctx, ReadQuery, t.ID)); err != nil {
-		return nil, fmt.Errorf("error reading text after upsert: %w", err)
-	} else if err := tx.Commit(); err != nil {
+	// if t, err = scanText(tx.QueryRowContext(ctx, ReadQuery, t.ID)); err != nil {
+	// 	return nil, fmt.Errorf("error reading text after upsert: %w", err)
+	// } else if err := tx.Commit(); err != nil {
+	// 	return nil, fmt.Errorf("couldn't commit transaction: %w", err)
+	// }
+
+	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("couldn't commit transaction: %w", err)
 	}
+
 	return t, nil
 }
 
