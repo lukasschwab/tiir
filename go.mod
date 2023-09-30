@@ -2,19 +2,21 @@ module github.com/lukasschwab/tiir
 
 go 1.20
 
-require github.com/charmbracelet/bubbles v0.15.0
+require (
+	github.com/charmbracelet/bubbles v0.15.0
+	github.com/dolthub/go-mysql-server v0.17.0
+	github.com/go-sql-driver/mysql v1.7.1
+)
 
 require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/dolthub/flatbuffers/v23 v23.3.3-dh.2 // indirect
 	github.com/dolthub/go-icu-regex v0.0.0-20230524105445-af7e7991c97e // indirect
-	github.com/dolthub/go-mysql-server v0.17.0 // indirect
 	github.com/dolthub/jsonpath v0.0.2-0.20230525180605-8dc13778fd72 // indirect
 	github.com/dolthub/vitess v0.0.0-20230823204737-4a21a94e90c3 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-kit/kit v0.10.0 // indirect
-	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/gocraft/dbr/v2 v2.7.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
