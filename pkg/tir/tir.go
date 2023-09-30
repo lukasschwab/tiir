@@ -2,19 +2,12 @@
 package tir
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/lukasschwab/tiir/pkg/store"
 	"github.com/lukasschwab/tiir/pkg/text"
-)
-
-const (
-	// IDLength for hexadecimal text IDs.
-	IDLength = 2 * 2 * 2
 )
 
 // Interface for managing tir texts. Callers should use this in lieu of
@@ -49,17 +42,17 @@ type app struct {
 }
 
 // Create a text.
-func (s *app) Create(text *text.Text) (*text.Text, error) {
+func (s *app) Create(t *text.Text) (*text.Text, error) {
 	var err error
-	if err = text.Validate(); err != nil {
+	if err = t.Validate(); err != nil {
 		return nil, err
-	} else if text.ID, err = randomID(); err != nil {
+	} else if t.ID, err = text.RandomID(); err != nil {
 		return nil, fmt.Errorf("couldn't randomize ID: %w", err)
 	}
-	if text.Timestamp.IsZero() {
-		text.Timestamp = time.Now()
+	if t.Timestamp.IsZero() {
+		t.Timestamp = time.Now()
 	}
-	return s.provider.Upsert(text)
+	return s.provider.Upsert(t)
 }
 
 // Read a text by ID.
@@ -91,12 +84,4 @@ func (s *app) List() ([]*text.Text, error) {
 // Close the underlying Store.
 func (s *app) Close() error {
 	return s.provider.Close()
-}
-
-func randomID() (string, error) {
-	bytes := make([]byte, IDLength/2)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
 }
