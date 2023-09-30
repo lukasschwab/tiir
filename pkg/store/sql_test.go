@@ -3,9 +3,6 @@ package store
 import (
 	"database/sql"
 	"fmt"
-	"io"
-	"log"
-	"os"
 	"testing"
 	"time"
 
@@ -13,10 +10,10 @@ import (
 	"github.com/lukasschwab/tiir/pkg/text"
 	"github.com/stretchr/testify/assert"
 
-	// TODO: clean up this imports mess.
-	msqle "github.com/dolthub/go-mysql-server"
-	"github.com/dolthub/go-mysql-server/memory"
-	"github.com/dolthub/go-mysql-server/server"
+	// In-memory SQL server for testing.
+	sqle "github.com/dolthub/go-mysql-server"
+	sqleMemory "github.com/dolthub/go-mysql-server/memory"
+	sqleServer "github.com/dolthub/go-mysql-server/server"
 )
 
 const (
@@ -26,12 +23,13 @@ const (
 )
 
 func startMySQLServer(t testing.TB) *sql.DB {
-	engine := msqle.NewDefault(memory.NewDBProvider(memory.NewDatabase(testDatabaseName)))
-	config := server.Config{
+	// Launch in-memory server with empty DB.
+	engine := sqle.NewDefault(sqleMemory.NewDBProvider(sqleMemory.NewDatabase(testDatabaseName)))
+	config := sqleServer.Config{
 		Protocol: "tcp",
 		Address:  fmt.Sprintf("%s:%d", testDatabaseAddress, testDatabasePort),
 	}
-	s, err := server.NewDefaultServer(config, engine)
+	s, err := sqleServer.NewDefaultServer(config, engine)
 	if err != nil {
 		t.Fatalf("Failed creating MySQL server: %v", err)
 	}
@@ -42,10 +40,12 @@ func startMySQLServer(t testing.TB) *sql.DB {
 		}
 	})
 
+	// Connect MySQL driver to that DB.
 	db, err := sql.Open("mysql", fmt.Sprintf("tcp(%s:%d)/%v?parseTime=true", testDatabaseAddress, testDatabasePort, testDatabaseName))
 	if err != nil {
 		t.Fatalf("Failed opening DB: %v", err)
 	}
+
 	return db
 }
 
@@ -107,69 +107,5 @@ func randomText(t testing.TB) *text.Text {
 		ID:     id,
 		// Truncate to elide lower precision in MySQL.
 		Timestamp: time.Now().UTC().Truncate(time.Second),
-	}
-}
-
-// func BenchmarkUseSQL(b *testing.B) {
-// 	texts := make([]*text.Text, b.N)
-// 	for i := range texts {
-// 		texts[i] = randomText(b)
-// 	}
-
-// 	db := startMySQLServer(b)
-// 	s, err := UseSQL(db)
-// 	if err != nil {
-// 		b.Fatalf("Failed starting DB")
-// 	}
-
-// 	benchmarkStore(b, s)
-// }
-
-// func BenchmarkUseMemory(b *testing.B) {
-// 	s := UseMemory()
-// 	benchmarkStore(b, s)
-// }
-
-func BenchmarkStore(b *testing.B) {
-	// FIXME: have to expose store *generators*.
-
-	mysql, err := UseSQL(startMySQLServer(b))
-	if err != nil {
-		b.Fatalf("Failed starting DB: %v", err)
-	}
-
-	fileDb, err := os.CreateTemp(b.TempDir(), "*.json")
-	if err != nil {
-		b.Fatalf("Failed creating file: %v", err)
-	}
-	file, err := useFile(fileDb.Name())
-	if err != nil {
-		b.Fatalf("Error using temp file as DB: %v", err)
-	}
-
-	stores := map[string]Interface{
-		"memory": UseMemory(),
-		"mysql":  mysql,
-		"file":   file,
-	}
-
-	for name, store := range stores {
-		b.Run(name, func(b *testing.B) {
-			benchmarkStore(b, store)
-		})
-	}
-}
-
-func benchmarkStore(b *testing.B, store Interface) {
-	log.SetOutput(io.Discard)
-
-	texts := make([]*text.Text, b.N)
-	for i := range texts {
-		texts[i] = randomText(b)
-	}
-
-	b.ResetTimer()
-	for _, text := range texts {
-		store.Upsert(text)
 	}
 }

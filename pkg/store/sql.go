@@ -15,7 +15,12 @@ const (
 	defaultOperationTimeout = 3 * time.Second
 )
 
-// TODO: this should be UseMySQL.
+// TODO: this should be UseMySQL as long as the stored queries are MySQL-
+// specific.
+
+// TODO: to operationalize this, I'd need to add parsers to generate the MySQL
+// DB and provide it; right now, I only have a fixed in-memory DB specified for
+// tests.
 
 func UseSQL(db *sql.DB) (Interface, error) {
 	s := SQL{
@@ -148,7 +153,7 @@ func (s SQL) Upsert(t *text.Text) (*text.Text, error) {
 
 	// NOTE: these are MYSQL-specific prepared statements.
 	upsertQuery := `REPLACE INTO texts (id, title, url, author, note, timestamp) VALUES (?, ?, ?, ?, ?, ?)`
-	if res, err := tx.ExecContext(ctx, upsertQuery, namedArgs(t)...); err != nil {
+	if res, err := tx.ExecContext(ctx, upsertQuery, asArgs(t)...); err != nil {
 		return nil, fmt.Errorf("error upserting text: %w", err)
 	} else if rowsAffected, err := res.RowsAffected(); err != nil {
 		return nil, fmt.Errorf("error checking rows affected: %w", err)
@@ -172,7 +177,7 @@ func (s SQL) Upsert(t *text.Text) (*text.Text, error) {
 	return t, nil
 }
 
-func namedArgs(t *text.Text) []any {
+func asArgs(t *text.Text) []any {
 	return []any{
 		t.ID,
 		t.Title,
@@ -180,12 +185,6 @@ func namedArgs(t *text.Text) []any {
 		t.Author,
 		t.Note,
 		t.Timestamp,
-		// sql.Named("id", t.ID),
-		// sql.Named("title", t.Title),
-		// sql.Named("url", t.URL),
-		// sql.Named("author", t.Author),
-		// sql.Named("note", t.Note),
-		// sql.Named("timestamp", t.Timestamp),
 	}
 }
 
