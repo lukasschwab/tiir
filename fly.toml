@@ -11,6 +11,7 @@ processes = []
   buildpacks = ["gcr.io/paketo-buildpacks/go"]
   [build.args]
     BP_KEEP_FILES="./static/*"
+    BP_GO_TARGETS = "./cmd/server"
 
 [env]
   PORT = "8080"
