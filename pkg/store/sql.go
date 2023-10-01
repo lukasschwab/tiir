@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/lukasschwab/tiir/pkg/text"
+
+	_ "github.com/libsql/libsql-client-go/libsql"
+	_ "modernc.org/sqlite"
 )
 
 const (
@@ -14,11 +17,15 @@ const (
 	defaultOperationTimeout = 3 * time.Second
 )
 
-func UseLibSQL(db *sql.DB) (Interface, error) {
-	return useLibSQL(db)
+func UseLibSQL(connectionString string) (Interface, error) {
+	return useLibSQL(connectionString)
 }
 
-func useLibSQL(db *sql.DB) (*SQL, error) {
+func useLibSQL(connectionString string) (*SQL, error) {
+	db, err := sql.Open("libsql", connectionString)
+	if err != nil {
+		return nil, fmt.Errorf("error opening DB connection: %w", err)
+	}
 	s := &SQL{
 		DB:               db,
 		pingTimeout:      defaultPingTimeout,
@@ -31,8 +38,6 @@ func useLibSQL(db *sql.DB) (*SQL, error) {
 	}
 	return s, nil
 }
-
-// TODO: implement an "if not exists" init step.
 
 // SQL implements [Interface]; see [UseSql].
 type SQL struct {
@@ -148,16 +153,6 @@ func (s *SQL) Upsert(t *text.Text) (*text.Text, error) {
 	}
 
 	return result, nil
-}
-
-func (s *SQL) Drop() error {
-	ctx, cancel := s.operationContext()
-	defer cancel()
-
-	if _, err := s.ExecContext(ctx, `DROP TABLE texts`); err != nil {
-		return fmt.Errorf("error dropping table: %w", err)
-	}
-	return nil
 }
 
 // TODO: turn these back into named values!

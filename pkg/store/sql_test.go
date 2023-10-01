@@ -1,7 +1,6 @@
 package store
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"testing"
@@ -14,27 +13,24 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func startLocalLibSQL(t testing.TB) *sql.DB {
+func startLocalLibSQL(t testing.TB) *SQL {
 	// Initialize an empty DB. In future tests, could initiate a non-empty one
 	// for testing (e.g. with existing table, entries).
 	emptyFile, err := os.CreateTemp(t.TempDir(), "*.db")
 	assert.NoError(t, err)
 	t.Logf("Using DB at file %v", emptyFile.Name())
 
-	dbURL := fmt.Sprintf("file://%s", emptyFile.Name())
-	db, err := sql.Open("libsql", dbURL)
+	connectionString := fmt.Sprintf("file://%s", emptyFile.Name())
+	s, err := useLibSQL(connectionString)
 	if err != nil {
-		t.Fatalf("Failed to open db %s: %s", dbURL, err)
+		t.Fatalf("Failed initializing LibSQL store: %v", err)
 	}
-	return db
+	return s
 }
 
 func TestUseLibSQL(t *testing.T) {
-	db := startLocalLibSQL(t)
-
 	// Initialize.
-	s, err := useLibSQL(db)
-	assert.NoError(t, err, "Shouldn't error initializing SQL store")
+	s := startLocalLibSQL(t)
 	texts, err := s.List(text.Timestamps, text.Descending)
 	assert.NoError(t, err, "Shouldn't error listing on empty database")
 	assert.Empty(t, texts)

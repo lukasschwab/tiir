@@ -22,6 +22,7 @@ var (
 		string(config.StoreTypeFile),
 		string(config.StoreTypeMemory),
 		string(config.StoreTypeHTTP),
+		string(config.StoreTypeLibSQL),
 	}
 
 	// editorOptions group the available EditorTypes for rendering CLI helper
@@ -100,6 +101,10 @@ func init() {
 	flagAPISecret := "api-secret"
 	rootCmd.PersistentFlags().String(flagAPISecret, "", "when store is 'http,' specifies API secret to authorize requests")
 	bindPFlag(config.KeyHTTPStoreAPISecret, flagAPISecret)
+
+	flagConnectionString := "connection-string"
+	rootCmd.PersistentFlags().String(flagConnectionString, "", "when store is 'libsql,' specifies where to connect")
+	bindPFlag(config.KeyLibSQLStoreConnectionString, flagConnectionString)
 
 	flagEditor := "editor"
 	rootCmd.PersistentFlags().StringP(flagEditor, "e", "tea", fmt.Sprintf("editor to use (%v)", strings.Join(editorOptions, ", ")))
