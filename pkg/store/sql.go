@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/lukasschwab/tiir/pkg/text"
@@ -15,15 +14,12 @@ const (
 	defaultOperationTimeout = 3 * time.Second
 )
 
-// TODO: this should be UseMySQL as long as the stored queries are MySQL-
-// specific.
+func UseLibSQL(db *sql.DB) (Interface, error) {
+	return useLibSQL(db)
+}
 
-// TODO: to operationalize this, I'd need to add parsers to generate the MySQL
-// DB and provide it; right now, I only have a fixed in-memory DB specified for
-// tests.
-
-func UseSQL(db *sql.DB) (Interface, error) {
-	s := SQL{
+func useLibSQL(db *sql.DB) (*SQL, error) {
+	s := &SQL{
 		DB:               db,
 		pingTimeout:      defaultPingTimeout,
 		operationTimeout: defaultOperationTimeout,
@@ -45,7 +41,7 @@ type SQL struct {
 	operationTimeout time.Duration
 }
 
-func (s SQL) ping() error {
+func (s *SQL) ping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), s.pingTimeout)
 	defer cancel()
 
@@ -56,7 +52,7 @@ func (s SQL) ping() error {
 	return nil
 }
 
-func (s SQL) init() error {
+func (s *SQL) init() error {
 	ctx, cancel := s.operationContext()
 	defer cancel()
 
@@ -67,7 +63,7 @@ func (s SQL) init() error {
 		url text NOT NULL,
 		author text NOT NULL,
 		note text NOT NULL,
-		timestamp timestamp NOT NULL
+		timestamp DATETIME NOT NULL
 	)
 	`
 	if _, err := s.ExecContext(ctx, q); err != nil {
@@ -77,18 +73,16 @@ func (s SQL) init() error {
 	return nil
 }
 
-func (s SQL) operationContext() (context.Context, context.CancelFunc) {
+func (s *SQL) operationContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), s.operationTimeout)
 }
 
 // Delete implements [Interface].
-func (s SQL) Delete(id string) (*text.Text, error) {
+func (s *SQL) Delete(id string) (*text.Text, error) {
 	ctx, cancel := s.operationContext()
 	defer cancel()
 
-	q := `
-	DELETE FROM texts WHERE id = :id: RETURNING id, title, url, author, note, timestamp
-	`
+	q := `DELETE FROM texts WHERE id = :id RETURNING id, title, url, author, note, timestamp`
 
 	t, err := scanText(s.QueryRowContext(ctx, q, sql.Named("id", id)))
 	if err != nil {
@@ -100,7 +94,7 @@ func (s SQL) Delete(id string) (*text.Text, error) {
 }
 
 // List implements [Interface].
-func (s SQL) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
+func (s *SQL) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
 	ctx, cancel := s.operationContext()
 	defer cancel()
 
@@ -125,15 +119,13 @@ func (s SQL) List(c text.Comparator, d text.Direction) ([]*text.Text, error) {
 	return texts, nil
 }
 
-// TODO: standardize query text handling. Also, consider transactionalized inner
-// implementations so other functions can call Read.
-const ReadQuery = `SELECT id, title, url, author, note, timestamp FROM texts AS t WHERE t.id = ?`
-
 // Read implements [Interface].
-func (s SQL) Read(id string) (*text.Text, error) {
+func (s *SQL) Read(id string) (*text.Text, error) {
 	ctx, cancel := s.operationContext()
 	defer cancel()
-	t, err := scanText(s.QueryRowContext(ctx, ReadQuery, id))
+
+	q := `SELECT id, title, url, author, note, timestamp FROM texts AS t WHERE t.id = :id `
+	t, err := scanText(s.QueryRowContext(ctx, q, sql.Named("id", id)))
 	if err != nil {
 		return nil, fmt.Errorf("error loading row: %w", err)
 	}
@@ -141,50 +133,42 @@ func (s SQL) Read(id string) (*text.Text, error) {
 }
 
 // Upsert implements [Interface].
-func (s SQL) Upsert(t *text.Text) (*text.Text, error) {
+func (s *SQL) Upsert(t *text.Text) (*text.Text, error) {
 	ctx, cancel := s.operationContext()
 	defer cancel()
 
-	tx, err := s.BeginTx(ctx, nil)
+	upsertQuery := `
+	REPLACE INTO texts	(id, title, url, author, note, timestamp) 
+	VALUES 				(:id, :title, :url, :author, :note, :timestamp) 
+	RETURNING			id, title, url, author, note, timestamp
+	`
+	result, err := scanText(s.QueryRowContext(ctx, upsertQuery, asArgs(t)...))
 	if err != nil {
-		return nil, fmt.Errorf("can't begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	// NOTE: these are MYSQL-specific prepared statements.
-	upsertQuery := `REPLACE INTO texts (id, title, url, author, note, timestamp) VALUES (?, ?, ?, ?, ?, ?)`
-	if res, err := tx.ExecContext(ctx, upsertQuery, asArgs(t)...); err != nil {
 		return nil, fmt.Errorf("error upserting text: %w", err)
-	} else if rowsAffected, err := res.RowsAffected(); err != nil {
-		return nil, fmt.Errorf("error checking rows affected: %w", err)
-	} else {
-		switch rowsAffected {
-		case 0:
-			log.Printf("Careful: upsert affected 0 rows")
-		case 1:
-			log.Printf("Upsert inserted new text %v", t.ID)
-		case 2:
-			log.Printf("Upsert updated existing text %v", t.ID)
-		}
 	}
 
-	// NOTE: this re-read should really be superfluous.
-	if t, err = scanText(tx.QueryRowContext(ctx, ReadQuery, t.ID)); err != nil {
-		return nil, fmt.Errorf("error reading text after upsert: %w", err)
-	} else if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("couldn't commit transaction: %w", err)
-	}
-	return t, nil
+	return result, nil
 }
 
+func (s *SQL) Drop() error {
+	ctx, cancel := s.operationContext()
+	defer cancel()
+
+	if _, err := s.ExecContext(ctx, `DROP TABLE texts`); err != nil {
+		return fmt.Errorf("error dropping table: %w", err)
+	}
+	return nil
+}
+
+// TODO: turn these back into named values!
 func asArgs(t *text.Text) []any {
 	return []any{
-		t.ID,
-		t.Title,
-		t.URL,
-		t.Author,
-		t.Note,
-		t.Timestamp,
+		sql.Named("id", t.ID),
+		sql.Named("title", t.Title),
+		sql.Named("url", t.URL),
+		sql.Named("author", t.Author),
+		sql.Named("note", t.Note),
+		sql.Named("timestamp", t.Timestamp),
 	}
 }
 
