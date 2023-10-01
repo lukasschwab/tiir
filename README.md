@@ -45,7 +45,12 @@ $ flyctl secrets set TIR_API_SECRET=YOUR_SECRET_HERE
 
 ## Configuration
 
-`tir` looks for a configuration file at `/etc/tir/.tir.config` and `$HOME/.tir.config`.
+`tir` looks for a configuration file at `/etc/tir/.tir.config` and `$HOME/.tir.config`. This file configures two independent components:
+
+1. *Store* for persisting and retrieving texts.
+2. *Editor* for viewing and modifying texts.
+
+Some example configurations are provided below. Run `tir help` or read [./pkg/config/config.go](./pkg/config/config.go) for more details.
 
 ### Local file store
 
@@ -61,7 +66,45 @@ This `.tir.config` file configures tir to use a file store rooted at `/Users/me/
 }
 ```
 
-### Remote server
+### libSQL and SQLite3 databases
+
+[libSQL](https://libsql.org/) is an open-source fork of SQLite maintained by [Turso](https://turso.tech/); it retains SQLite's features, adds extensions *not used by this project,* and provides a [`database/sql`-compatible SQLite driver](https://github.com/libsql/libsql-client-go/).
+
+This powers two kinds of stores, comparable to [local files](#local-file-store) and [remote servers](#remote-server) respectively, with the same `connection_string` config input.
+
+#### Local SQLite3 database file
+
+SQLite databases are usually single files on disk.[^file] You can use a local SQLite file *in lieu* of a JSON file ([Local file store](#local-file-store) above).
+
+[^file]: https://www.sqlite.org/fileformat.html
+
+```json
+{
+    "store": {
+        "type": "libsql",
+        "connection_string": "file:///path/to/file.db"
+    }
+}
+```
+
+If you supply an initially empty file, tir will initialize the required database table automatically.
+
+#### Turso-hosted `libSQL` database 
+
+```json
+{
+    "store": {
+        "type": "libsql",
+        "connection_string": "libsql://[your-database].turso.io?authToken=[your-auth-token]"
+    }
+}
+```
+
+See [Turso's documentation](https://docs.turso.tech/reference/turso-cli#database-client-authentication-tokens) for instructions on how to generate your database auth token.
+
+If you supply a read-only token, tir won't be able to initialize the database or create, update, or delete texts. That offers redundant security on a hosted [HTTP server](#http-server), but it's probably *not* what you want locally.
+
+### `cmd/server` instance
 
 This `.tir.config` file configures tir to talk to a server at `https://tir.fly.dev/` that accepts the API secret `YOUR_API_SECRET`, and to use the rich CLI editor:
 
@@ -76,8 +119,6 @@ This `.tir.config` file configures tir to talk to a server at `https://tir.fly.d
 }
 ```
 
-### Local server
-
 Alternatively, if you're running the server locally on port 8080:
 
 ```json
@@ -89,3 +130,4 @@ Alternatively, if you're running the server locally on port 8080:
     },
     "editor": "tea"
 }
+```
