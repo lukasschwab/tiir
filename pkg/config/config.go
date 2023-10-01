@@ -37,6 +37,10 @@ import (
 //
 //	{ "store": { "type": "http", "base_url": "https://tir.example.com", "api_secret": "YOUR_SECRET" } }
 //
+// And this .tir.config file configures tir to use a Turso-hosted database:
+//
+//	{ "store": { "type": "libsql", "connection_string": "libsql://[your-database].turso.io?authToken=[your-auth-token]" } }
+//
 // For info on where tir looks for a config, see [Load]. For info about
 // how to provide configuration, see [viper].
 //
