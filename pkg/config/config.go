@@ -37,6 +37,10 @@ import (
 //
 //	{ "store": { "type": "http", "base_url": "https://tir.example.com", "api_secret": "YOUR_SECRET" } }
 //
+// And this .tir.config file configures tir to use a Turso-hosted database:
+//
+//	{ "store": { "type": "libsql", "connection_string": "libsql://[your-database].turso.io?authToken=[your-auth-token]" } }
+//
 // For info on where tir looks for a config, see [Load]. For info about
 // how to provide configuration, see [viper].
 //
@@ -57,6 +61,14 @@ const (
 	// server that requires it will reject requests.
 	KeyHTTPStoreAPISecret = KeyStoreGroup + ".api_secret"
 
+	// KeyLibSQLStoreConnectionString must be defined for LibSQL stores. It
+	// specifies where/how to connect to LibSQL. For example:
+	//
+	// + A local SQLite file:	"file://path/to/file.db"
+	// + A local sqld instance:	"http://127.0.0.1:8080"
+	// + A Turso-hosted DB:		"libsql://[your-database].turso.io?authToken=[your-auth-token]"
+	KeyLibSQLStoreConnectionString = KeyStoreGroup + ".connection_string"
+
 	// KeyEditor is the top-level key for CLI editor configuration.
 	KeyEditor = "editor"
 )
@@ -72,6 +84,8 @@ const (
 	StoreTypeMemory storeType = "memory"
 	// StoreTypeMemory selects the store.http store.
 	StoreTypeHTTP storeType = "http"
+	// StoreTypeLibSQL selectes the store.libsql store (supports Turso).
+	StoreTypeLibSQL storeType = "libsql"
 )
 
 type editorType string
@@ -112,6 +126,15 @@ var (
 				log.Printf("No API secret provided; store may reject requests")
 			}
 			return store.UseHTTP(baseURL, apiSecret)
+		},
+		StoreTypeLibSQL: func(cfg *Config) (store.Interface, error) {
+			connectionString := viper.GetString(KeyLibSQLStoreConnectionString)
+			if connectionString == "" {
+				return nil, errors.New("must provide connection string for LibSQL store")
+			}
+			log.Printf("Using LibSQL store")
+
+			return store.UseLibSQL(connectionString)
 		},
 	}
 

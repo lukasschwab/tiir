@@ -3,8 +3,14 @@
 package text
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"time"
+)
+
+const (
+	IDLength = 2 * 2 * 2
 )
 
 // Text you read and recorded in this application.
@@ -66,4 +72,12 @@ func (t *Text) Integrate(updates *Text) {
 	if updates.URL != "" {
 		t.URL = updates.URL
 	}
+}
+
+func RandomID() (string, error) {
+	bytes := make([]byte, IDLength/2)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
