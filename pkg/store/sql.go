@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/lukasschwab/tiir/pkg/text"
@@ -100,9 +101,12 @@ func (s *SQL) prepare() error {
 	ctx, cancel := s.operationContext()
 	defer cancel()
 
-	if _, err := s.ExecContext(ctx, initTableQuery); err != nil {
-		return fmt.Errorf("error creating table: %w", err)
-	} else if s.upsert, err = s.Prepare(upsertQuery); err != nil {
+	var err error
+	if _, err = s.ExecContext(ctx, initTableQuery); err != nil {
+		log.Printf("[WARN] table initialization failed; might have read-only access")
+	}
+
+	if s.upsert, err = s.Prepare(upsertQuery); err != nil {
 		return fmt.Errorf("erorr preparing upsert: %w", err)
 	} else if s.read, err = s.Prepare(readQuery); err != nil {
 		return fmt.Errorf("error preparing read: %w", err)
