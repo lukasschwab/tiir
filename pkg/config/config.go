@@ -178,6 +178,17 @@ func Load() (*Config, error) {
 		}
 	}
 
+	// The standard post-prefixing key for this value is unwieldy
+	// (e.g. TIR_STORE.API_SECRET), hence the replacement (e.g. TIR_API_SECRET).
+	viper.SetEnvKeyReplacer(strings.NewReplacer("STORE.", ""))
+	if err := viper.BindEnv(KeyStoreType); err != nil {
+		log.Printf("ignoring error binding %v: %v", KeyStoreType, err)
+	} else if err := viper.BindEnv(KeyHTTPStoreAPISecret); err != nil {
+		log.Printf("ignoring error binding %v: %v", KeyHTTPStoreAPISecret, err)
+	} else if err := viper.BindEnv(KeyLibSQLStoreConnectionString); err != nil {
+		log.Printf("ignoring error binding %v: %v", KeyLibSQLStoreConnectionString, err)
+	}
+
 	cfg := &Config{v: viper.GetViper()}
 
 	// Construct a service.
@@ -217,13 +228,6 @@ func (cfg *Config) getEditorType() editorType {
 
 // GetAPISecret provided through [viper] or the env variable TIR_API_SECRET if
 // it's present.
-//
-// The standard post-prefixing key for this value is unwieldy
-// (TIR_STORE.API_SECRET), hence the TIR_API_SECRET alias.
 func (cfg *Config) GetAPISecret() string {
-	cfg.v.SetEnvKeyReplacer(strings.NewReplacer("STORE.", ""))
-	if err := cfg.v.BindEnv(KeyHTTPStoreAPISecret); err != nil {
-		log.Printf("ignoring error binding %v: %v", KeyHTTPStoreAPISecret, err)
-	}
 	return cfg.v.GetString(KeyHTTPStoreAPISecret)
 }
