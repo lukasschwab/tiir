@@ -54,6 +54,7 @@ Store readings elsewhere by specifying an alternate --store:
 + 'http': a hosted tir service. Requires --base-url; some hosted services will
   also require --api-secret.
 + 'memory': an in-memory store that doesn't persist data between calls.
++ 'libsql': a LibSQL-backed store, like a hosted Turso DB.
 
 Specify an editor for creating and updating records:
 
