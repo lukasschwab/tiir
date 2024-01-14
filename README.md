@@ -5,7 +5,7 @@ A flexible successor to [tir](https://github.com/lukasschwab/tir):
 
 > tir – short for "Today I Read" – is a barebones CLI for logging memorable articles.
 >
-> ![GIF from "One Hundred and One Dalmatians" (1961) of Anita Radcliffe reading a book on a park bench.](https://camo.githubusercontent.com/2d251a5ede6b1cc7ac83876897c7743eadd30202f9343680b116569ee8d5367c/687474703a2f2f6c756b61737363687761622e6769746875622e696f2f696d672f72656164696e672e676966)
+> ![GIF from "One Hundred and One Dalmatians" (1961) of Anita Radcliffe reading a book on a park bench.](http://lukasschwab.github.io/img/reading.gif)
 
 ## Setup
 
