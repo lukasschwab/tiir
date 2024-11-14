@@ -42,3 +42,33 @@ func TestUseFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, f2.cache.texts, "abc123de", "records should persist when file is closed")
 }
+
+func TestFile_Public(t *testing.T) {
+	db, err := os.CreateTemp(t.TempDir(), "*.json")
+	assert.NoError(t, err)
+	assert.NoError(t, db.Close())
+
+	// Initial store: from empty DB.
+	f, err := useFile(db.Name())
+	assert.NoError(t, err)
+
+	err = f.load()
+	assert.NoError(t, err)
+	assert.Empty(t, f.cache.texts)
+
+	publicText := randomText(t)
+	publicText.Public = true
+
+	privateText := randomText(t)
+	privateText.Public = false
+
+	for _, input := range []*text.Text{publicText, privateText} {
+		result, err := f.Upsert(input)
+		assert.NoError(t, err)
+		assert.Equal(t, input.Public, result.Public)
+
+		read, err := f.Read(input.ID)
+		assert.NoError(t, err)
+		assert.Equal(t, input.Public, read.Public)
+	}
+}

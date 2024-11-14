@@ -106,9 +106,15 @@ type item struct {
 	*text.Text
 }
 
-func (i item) Title() string       { return fmt.Sprintf("[%v] %v", i.Text.ID, i.Text.Title) }
+func (i item) Title() string {
+	publicity := ""
+	if !i.Public {
+		publicity = " 🔒"
+	}
+	return fmt.Sprintf("[%v]%v %v", i.Text.ID, publicity, i.Text.Title)
+}
 func (i item) Description() string { return i.Text.Note }
-func (i item) FilterValue() string { return i.Title() }
+func (i item) FilterValue() string { return i.Title() + " " + i.Description() }
 
 type model struct {
 	list list.Model

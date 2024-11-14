@@ -32,13 +32,14 @@ type Interface interface {
 // New constructs a new application [Interface] around s. In general, use
 // [github.com/lukasschwab/tiir/pkg/config.Load] instead to respect user
 // configuration.
-func New(s store.Interface) Interface {
-	return &app{provider: s}
+func New(s store.Interface, public bool) Interface {
+	return &app{provider: s, public: public}
 }
 
 // app for managing tir texts.
 type app struct {
 	provider store.Interface
+	public   bool
 }
 
 // Create a text.
@@ -78,7 +79,19 @@ func (s *app) Delete(id string) (*text.Text, error) {
 
 // List all texts available to the service.
 func (s *app) List() ([]*text.Text, error) {
-	return s.provider.List(text.Timestamps, text.Descending)
+	texts, err := s.provider.List(text.Timestamps, text.Descending)
+	if err != nil || !s.public {
+		return texts, err
+	}
+
+	// Filter for only visible texts.
+	visibleTexts := make([]*text.Text, 0, len(texts))
+	for _, text := range texts {
+		if text.Public {
+			visibleTexts = append(visibleTexts, text)
+		}
+	}
+	return visibleTexts, nil
 }
 
 // Close the underlying Store.

@@ -110,6 +110,9 @@ func init() {
 	flagEditor := "editor"
 	rootCmd.PersistentFlags().StringP(flagEditor, "e", "tea", fmt.Sprintf("editor to use (%v)", strings.Join(editorOptions, ", ")))
 	bindPFlag(config.KeyEditor, flagEditor)
+
+	flagPublic := "public"
+	rootCmd.PersistentFlags().BoolP(flagPublic, "p", true, "whether this app is a public entry point")
 }
 
 // bindPFlag in viper specified by configKey to the persistent cobra flag with

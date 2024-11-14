@@ -65,10 +65,12 @@ func (e editable) MarshalJSON() ([]byte, error) {
 		URL    string `json:"url"`
 		Author string `json:"author"`
 		Note   string `json:"note"`
+		Public bool   `json:"public"`
 	}{
 		Title:  e.Title,
 		URL:    e.URL,
 		Author: e.Author,
 		Note:   e.Note,
+		Public: e.Public,
 	})
 }

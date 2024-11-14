@@ -12,7 +12,7 @@ import (
 func TestService(t *testing.T) {
 	assert.Implements(t, (*io.Closer)(nil), new(app))
 
-	s := New(store.UseMemory())
+	s := New(store.UseMemory(), false)
 
 	original := &text.Text{Author: "a", Note: "n", URL: "u", Title: "t"}
 
@@ -43,8 +43,38 @@ func TestService(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestList_NonpublicText(t *testing.T) {
+	public, private := New(store.UseMemory(), true), New(store.UseMemory(), false)
+
+	for _, s := range []Interface{public, private} {
+		_, err := s.Create(&text.Text{Author: "a", Note: "n", URL: "u", Title: "t", Public: false})
+		assert.NoError(t, err)
+	}
+
+	publicTexts, err := public.List()
+	assert.NoError(t, err)
+	assert.Len(t, publicTexts, 0)
+
+	allTexts, err := private.List()
+	assert.NoError(t, err)
+	assert.Len(t, allTexts, 1)
+}
+
+func TestList_PublicText(t *testing.T) {
+	public, private := New(store.UseMemory(), true), New(store.UseMemory(), false)
+
+	for _, s := range []Interface{public, private} {
+		_, err := s.Create(&text.Text{Author: "a", Note: "n", URL: "u", Title: "t", Public: true})
+		assert.NoError(t, err)
+
+		texts, err := s.List()
+		assert.NoError(t, err)
+		assert.Len(t, texts, 1)
+	}
+}
+
 func TestValidation(t *testing.T) {
-	s := New(store.UseMemory())
+	s := New(store.UseMemory(), false)
 
 	created, err := s.Create(&text.Text{})
 	assert.Error(t, err)

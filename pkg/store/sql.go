@@ -29,25 +29,26 @@ const (
 		url text NOT NULL,
 		author text NOT NULL,
 		note text NOT NULL,
-		timestamp DATETIME NOT NULL
+		timestamp DATETIME NOT NULL,
+		public BOOLEAN NOT NULL DEFAULT TRUE
 	);
 	`
 	deleteQuery = `
 	DELETE
 	FROM texts WHERE id = :id
-	RETURNING id, title, url, author, note, timestamp;
+	RETURNING id, title, url, author, note, timestamp, public;
 	`
 	readQuery = `
-	SELECT id, title, url, author, note, timestamp
+	SELECT id, title, url, author, note, timestamp, public
 	FROM texts WHERE id = :id;
 	`
 	upsertQuery = `
-	REPLACE INTO texts (id, title, url, author, note, timestamp) 
-	VALUES (:id, :title, :url, :author, :note, :timestamp) 
-	RETURNING id, title, url, author, note, timestamp;
+	REPLACE INTO texts (id, title, url, author, note, timestamp, public) 
+	VALUES (:id, :title, :url, :author, :note, :timestamp, :public) 
+	RETURNING id, title, url, author, note, timestamp, public;
 	`
 	listQuery = `
-	SELECT id, title, url, author, note, timestamp FROM texts;
+	SELECT id, title, url, author, note, timestamp, public FROM texts;
 	`
 )
 
@@ -196,7 +197,7 @@ type scannable interface {
 // NOTE: scan may need to correspond to field order in prepared queries.
 func scan(headRow scannable) (*text.Text, error) {
 	var t text.Text
-	if err := headRow.Scan(&t.ID, &t.Title, &t.URL, &t.Author, &t.Note, &t.Timestamp); err != nil {
+	if err := headRow.Scan(&t.ID, &t.Title, &t.URL, &t.Author, &t.Note, &t.Timestamp, &t.Public); err != nil {
 		return nil, fmt.Errorf("error scanning text: %w", err)
 	}
 	return &t, nil
@@ -210,5 +211,6 @@ func asNamedArgs(t *text.Text) []any {
 		sql.Named("author", t.Author),
 		sql.Named("note", t.Note),
 		sql.Named("timestamp", t.Timestamp),
+		sql.Named("public", t.Public),
 	}
 }

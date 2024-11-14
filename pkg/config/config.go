@@ -71,6 +71,8 @@ const (
 
 	// KeyEditor is the top-level key for CLI editor configuration.
 	KeyEditor = "editor"
+
+	KeyPublic = "public"
 )
 
 type storeType string
@@ -168,6 +170,7 @@ func Load() (*Config, error) {
 	// viper.GetString's type indirection.
 	viper.SetDefault(KeyStoreType, string(StoreTypeFile))
 	viper.SetDefault(KeyEditor, string(EditorTypeTea))
+	viper.SetDefault(KeyPublic, true)
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -200,7 +203,7 @@ func Load() (*Config, error) {
 	if err != nil {
 		return cfg, fmt.Errorf("error generating store: %w", err)
 	}
-	cfg.App = tir.New(store)
+	cfg.App = tir.New(store, cfg.getPublic())
 
 	// Construct a store.
 	if cfg.Editor, ok = editors[cfg.getEditorType()]; !ok {
@@ -224,6 +227,10 @@ func (cfg *Config) getStoreType() storeType {
 
 func (cfg *Config) getEditorType() editorType {
 	return editorType(cfg.v.GetString(KeyEditor))
+}
+
+func (cfg *Config) getPublic() bool {
+	return cfg.v.GetBool(KeyPublic)
 }
 
 // GetAPISecret provided through [viper] or the env variable TIR_API_SECRET if

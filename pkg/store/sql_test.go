@@ -79,6 +79,26 @@ func TestUseLibSQL(t *testing.T) {
 	assert.Equal(t, firstText, texts[0])
 }
 
+func TestSQL_Public(t *testing.T) {
+	s := startLocalLibSQL(t)
+
+	publicText := randomText(t)
+	publicText.Public = true
+
+	privateText := randomText(t)
+	privateText.Public = false
+
+	for _, input := range []*text.Text{publicText, privateText} {
+		result, err := s.Upsert(input)
+		assert.NoError(t, err)
+		assert.Equal(t, input.Public, result.Public)
+
+		read, err := s.Read(input.ID)
+		assert.NoError(t, err)
+		assert.Equal(t, input.Public, read.Public)
+	}
+}
+
 func randomText(t testing.TB) *text.Text {
 	id, err := text.RandomID()
 	if err != nil {

@@ -15,7 +15,7 @@ var createCmd = &cobra.Command{
 	Long: `Create a tir record in the configured store. For store and editor options, see
 tir --help.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		initial := &text.Text{}
+		initial := &text.Text{Public: true}
 		if final, err := initial.EditWith(cfg.Editor); err != nil {
 			log.Fatalf("couldn't run editor: %v", err)
 		} else if created, err := cfg.App.Create(final); err != nil {

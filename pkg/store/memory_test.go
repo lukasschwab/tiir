@@ -16,3 +16,23 @@ func TestUseMemory(t *testing.T) {
 	assert.NoError(t, err, "stores don't do validation")
 	assert.Equal(t, someText, created)
 }
+
+func TestMemory_Public(t *testing.T) {
+	s := UseMemory()
+
+	publicText := randomText(t)
+	publicText.Public = true
+
+	privateText := randomText(t)
+	privateText.Public = false
+
+	for _, input := range []*text.Text{publicText, privateText} {
+		result, err := s.Upsert(input)
+		assert.NoError(t, err)
+		assert.Equal(t, input.Public, result.Public)
+
+		read, err := s.Read(input.ID)
+		assert.NoError(t, err)
+		assert.Equal(t, input.Public, read.Public)
+	}
+}

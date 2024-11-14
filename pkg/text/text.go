@@ -21,6 +21,7 @@ type Text struct {
 	Note      string    `json:"note"`
 	ID        string    `json:"id"`
 	Timestamp time.Time `json:"timestamp"`
+	Public    bool      `json:"public"`
 }
 
 // Validate t has nonzero values for all required fields:
