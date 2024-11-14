@@ -97,6 +97,8 @@ const (
 	EditorTypeVim editorType = "vim"
 	// EditorTypeTea selects the edit.Tea editor (default).
 	EditorTypeTea editorType = "tea"
+	// EditorTypeHuh selects the edit.Huh editor.
+	EditorTypeHuh editorType = "huh"
 )
 
 // Enum-option to value lookups.
@@ -141,6 +143,7 @@ var (
 	editors = map[editorType]text.Editor{
 		EditorTypeVim: edit.Vim,
 		EditorTypeTea: edit.Tea,
+		EditorTypeHuh: edit.Huh,
 	}
 )
 

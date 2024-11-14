@@ -30,6 +30,7 @@ var (
 	editorOptions = []string{
 		string(config.EditorTypeVim),
 		string(config.EditorTypeTea),
+		string(config.EditorTypeHuh),
 	}
 
 	// specifiedTextID set for update and delete commands.

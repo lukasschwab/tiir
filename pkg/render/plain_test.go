@@ -29,5 +29,5 @@ func TestRenderPlainText(t *testing.T) {
 
 	assert.NotZero(t, rendered.Len())
 
-	t.Logf(rendered.String())
+	t.Log(rendered.String())
 }
