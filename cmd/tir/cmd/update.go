@@ -20,7 +20,7 @@ see tir --help.`,
 		} else if final, err := initial.EditWith(cfg.Editor); err != nil {
 			log.Fatalf("couldn't run editor: %v", err)
 		} else if updated, err := cfg.App.Update(specifiedTextID, final); err != nil {
-			log.Fatalf("error comitting new record: %v", err)
+			log.Fatalf("error committing new record: %v", err)
 		} else if repr, err := json.MarshalIndent(updated, "", "\t"); err != nil {
 			log.Fatalf("error representing updated record '%v': %v", updated.ID, err)
 		} else {
