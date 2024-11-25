@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -32,8 +33,10 @@ tir --help.`,
 			log.Fatalf("Error listing texts: %v", err)
 		}
 
-		if err := renderFunc(texts, cmd); err != nil {
+		if selectedText, err := renderFunc(texts, cmd); err != nil {
 			log.Fatalf("error rendering texts: %v", err)
+		} else if bytes, err := json.MarshalIndent(selectedText, "", "\t"); selectedText != nil && err == nil {
+			fmt.Println(string(bytes))
 		}
 	},
 }
@@ -63,12 +66,12 @@ var rendererOptions = []string{
 	string(OutputHTML),
 }
 
-type renderFunc func(texts []*text.Text, cmd *cobra.Command) error
+type renderFunc func(texts []*text.Text, cmd *cobra.Command) (selected *text.Text, err error)
 
 // cli adapter for render.Functions.
 func cli(f render.Function) renderFunc {
-	return func(texts []*text.Text, cmd *cobra.Command) error {
-		return f(texts, cmd.OutOrStdout())
+	return func(texts []*text.Text, cmd *cobra.Command) (*text.Text, error) {
+		return nil, f(texts, cmd.OutOrStdout())
 	}
 }
 
@@ -84,12 +87,12 @@ var outputRenderers = map[outputFormat]renderFunc{
 // renderTea renders a tea interface for listing/filtering texts. This is a
 // little awkward: the List interface lets us pick two strings to display, but
 // we really have 4-5.
-func renderTea(texts []*text.Text, cmd *cobra.Command) error {
+func renderTea(texts []*text.Text, cmd *cobra.Command) (*text.Text, error) {
 	m := model{list: list.New(items(texts), list.NewDefaultDelegate(), 0, 0)}
 	m.list.Title = "Articles"
 	p := tea.NewProgram(m, tea.WithAltScreen())
-	_, err := p.Run()
-	return err
+	finalModel, err := p.Run()
+	return finalModel.(model).finalSelection.Text, err
 }
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
@@ -112,6 +115,8 @@ func (i item) FilterValue() string { return i.Title() }
 
 type model struct {
 	list list.Model
+	// TODO: consider allowing multiple selections.
+	finalSelection item
 }
 
 func (m model) Init() tea.Cmd {
@@ -122,6 +127,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		} else if msg.String() == "enter" {
+			m.finalSelection = m.list.SelectedItem().(item)
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
