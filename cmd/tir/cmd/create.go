@@ -31,7 +31,7 @@ func init() {
 }
 
 func fromUrl(url string) {
-	initial, err := web.Metadata(url)
+	initial, err := web.WebMetadata(url)
 	if err != nil {
 		log.Printf("coultn't read '%s'; skipping: %v", url, err)
 	}
