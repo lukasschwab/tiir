@@ -44,31 +44,37 @@ const (
 	noteInputIndex   = 3
 )
 
+var (
+	inputIndices = []int{urlInputIndex, titleInputIndex, authorInputIndex, noteInputIndex}
+)
+
 type model struct {
 	result *text.Text
 
 	focusIndex int
+
+	// TODO: extract to own model: encapsulate value-derived rendering.
 	// URL, Title, Author, Notes.
 	inputs [4]textinput.Model
 }
 
-func (m model) urlInput() textinput.Model {
+func (m *model) urlInput() textinput.Model {
 	return m.inputs[urlInputIndex]
 }
 
-func (m model) titleInput() textinput.Model {
+func (m *model) titleInput() textinput.Model {
 	return m.inputs[titleInputIndex]
 }
 
-func (m model) authorInput() textinput.Model {
+func (m *model) authorInput() textinput.Model {
 	return m.inputs[authorInputIndex]
 }
 
-func (m model) noteInput() textinput.Model {
+func (m *model) noteInput() textinput.Model {
 	return m.inputs[noteInputIndex]
 }
 
-func (m model) toText() *text.Text {
+func (m *model) toText() *text.Text {
 	// NOTE: should we validate here, to prevent premature submission?
 	return &text.Text{
 		URL:    m.urlInput().Value(),
@@ -78,20 +84,20 @@ func (m model) toText() *text.Text {
 	}
 }
 
-func (m model) canSubmit() bool {
+func (m *model) canSubmit() bool {
 	return m.toText().Validate() == nil
 }
 
 // commit the edited state to the model result.
-func (m model) commit() {
+func (m *model) commit() {
 	*m.result = *m.toText()
 }
 
-func (m model) Init() tea.Cmd {
+func (m *model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m model) wrapFocusIndex(proposedIndex int) int {
+func (m *model) wrapFocusIndex(proposedIndex int) int {
 	// Allow the user to highlight the "submit" button (see m.View)...
 	maxIndex := len(m.inputs)
 	// ...unless the input is invalid!
@@ -108,7 +114,7 @@ func (m model) wrapFocusIndex(proposedIndex int) int {
 	}
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -136,10 +142,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds := make([]tea.Cmd, len(m.inputs))
 			for i := 0; i <= len(m.inputs)-1; i++ {
 				if i == m.focusIndex {
-					// Set focused state
-					cmds[i] = m.inputs[i].Focus()
-					m.inputs[i].PromptStyle = focusedStyle
-					m.inputs[i].TextStyle = focusedStyle
+					cmds[i] = m.focus(i)
 					continue
 				}
 				// Remove focused state
@@ -173,7 +176,7 @@ func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m model) View() string {
+func (m *model) View() string {
 	var b strings.Builder
 
 	for i := range m.inputs {
@@ -192,8 +195,15 @@ func (m model) View() string {
 	return b.String()
 }
 
-func initialModel(initial, result *text.Text) model {
-	m := model{result: result}
+func (m *model) focus(inputIndex int) tea.Cmd {
+	cmd := m.inputs[inputIndex].Focus()
+	m.inputs[inputIndex].PromptStyle = focusedStyle
+	m.inputs[inputIndex].TextStyle = focusedStyle
+	return cmd
+}
+
+func initialModel(initial, result *text.Text) *model {
+	m := &model{result: result}
 
 	for index, data := range map[int][2]string{
 		urlInputIndex:    {"   URL> ", initial.URL},
@@ -209,10 +219,15 @@ func initialModel(initial, result *text.Text) model {
 		m.inputs[index] = input
 	}
 
-	// Focus the URL input initially.
-	m.inputs[urlInputIndex].Focus()
-	m.inputs[urlInputIndex].PromptStyle = focusedStyle
-	m.inputs[urlInputIndex].TextStyle = focusedStyle
+	// Focus the first empty input initially.
+	firstEmptyInput := urlInputIndex
+	for _, index := range inputIndices {
+		if m.inputs[index].Value() == "" {
+			firstEmptyInput = index
+			break
+		}
+	}
+	m.focus(firstEmptyInput)
 
 	return m
 }
