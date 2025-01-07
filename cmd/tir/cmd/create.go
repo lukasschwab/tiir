@@ -31,11 +31,12 @@ func init() {
 }
 
 func fromUrl(url string) {
-	initial, err := web.WebMetadata(url)
-	if err != nil {
+	if initial, err := web.WebMetadata(url); err != nil {
 		log.Printf("coultn't read '%s'; skipping: %v", url, err)
+		from(&text.Text{URL: url})
+	} else {
+		from(initial)
 	}
-	from(initial)
 }
 
 func from(initial *text.Text) {
