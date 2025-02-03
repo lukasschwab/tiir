@@ -61,33 +61,3 @@ func TestMetadata(t *testing.T) {
 		})
 	}
 }
-
-// Bodge for generating JSON text for a new HTML test file. See [TestMetadata].
-func generateJSONFiles() {
-	cases, err := filepath.Glob("./tests/*.html")
-	if err != nil {
-		panic(err)
-	}
-
-	for _, testCase := range cases {
-		file, err := os.Open(testCase)
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
-
-		root := strings.TrimSuffix(testCase, filepath.Ext(testCase))
-
-		initial, err := web.Metadata(file)
-		if err != nil {
-			panic(err)
-		}
-
-		bytes, err := json.Marshal(initial)
-
-		err = os.WriteFile(fmt.Sprintf("%v.json", root), bytes, 0644)
-		if err != nil {
-			panic(err)
-		}
-	}
-}
