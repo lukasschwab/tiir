@@ -1,8 +1,8 @@
-name: golangci-lint
+name: Go
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -11,10 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.23'
       - name: Build
         run: go build -v ./...
       - name: Test
@@ -26,11 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.23'
+      # - name: Lint
+      #   uses: golangci/golangci-lint-action@v3
       - name: Lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: latest
+        uses: lukasschwab/golangci-lint-custom-plugins-action@v0.0.1
