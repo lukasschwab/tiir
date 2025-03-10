@@ -1,4 +1,4 @@
 ./*.html
 *.db
 .vscode
-./custom-gcl
+custom-gcl
