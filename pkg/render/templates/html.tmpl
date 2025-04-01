@@ -56,6 +56,32 @@
 <h1 class="title">tir</h1>
 <p><a href="https://github.com/lukasschwab/tiir">GitHub</a> &middot; <a href="/texts/feed.json">JSON Feed</a></p>
 
+<form id="textForm" 
+    hx-post="/texts" 
+    hx-target="this" 
+    hx-swap="none" 
+    hx-trigger="submit" 
+    hx-on="htmx:afterRequest: window.location.reload()"
+>
+    <div class="form-group row">
+        <label for="url">URL</label>
+        <input type="url" class="form-control" id="url" name="url" placeholder="Enter URL" required>
+    </div>
+    <div class="form-group row">
+        <label for="author">Author</label>
+        <input type="text" class="form-control" id="author" name="author" placeholder="Enter Author" required>
+    </div>
+    <div class="form-group row">
+        <label for="title">Title</label>
+        <input type="text" class="form-control" id="title" name="title" placeholder="Enter Title" required>
+    </div>
+    <div class="form-group row">
+        <label for="note">Note</label>
+        <textarea class="form-control" id="note" name="note" placeholder="Enter Note" rows="3"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+
 <hr/>
 
 <table class="table">
@@ -77,3 +103,5 @@
         {{end}}
     {{ end }}
 </table>
+
+<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
