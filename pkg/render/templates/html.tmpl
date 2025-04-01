@@ -89,11 +89,8 @@
 <details>
     <summary>Create a new text...</summary>
     <form id="textForm" 
-        hx-post="/texts" 
-        hx-target="this" 
-        hx-swap="none" 
-        hx-trigger="submit" 
-        hx-on="htmx:afterRequest: window.location.reload()"
+        action="/texts" method="post" target="oubliette"
+        onsubmit="this.submit(); window.location.reload(); return false;"
     >
         <div class="form-group">
             <label for="url">URL</label>
@@ -114,6 +111,8 @@
         <label>Submit</label>
         <button type="submit" class="btn btn-primary">Submit</button>
     </form>
+    <!-- Direct the AJAX response to this hidden iframe: prevent replacing DOM with JSON. -->
+    <iframe name="oubliette" style="display: none;"></iframe>
 </details>
 
 <table class="table">
@@ -132,5 +131,3 @@
         </tr>
     {{ end }}
 </table>
-
-<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
