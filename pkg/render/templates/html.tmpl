@@ -1,7 +1,6 @@
 <head>
 	<title>tir</title>
     <meta charset="UTF-8">
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" />
     <link rel="icon" href="./static/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="./static/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="./static/favicon-32x32.png">
@@ -15,90 +14,131 @@
         }
 
         body {
-            margin-top: 140px;
-            margin-bottom: 140px;
+            margin-top: 3em;
+            margin-bottom: 3em;
         }
 
-        .title {
-            font-size: 70px; 
-            text-decoration: bold; 
-            color: #0074D9;
-            text-align: center;
-        }
-
-        h3 {
+        /* h3 {
             margin-top: 0px;
             margin-bottom: 0px;
             font-size: 12px;
             text-align: center;
-        }
-
-        p {
-            text-align: center;
-        }
+        } */
 
         /* Bodge: don't wrap dates. */
         table tbody tr td:nth-child(4) {
             white-space: nowrap;
         }
 
-        hr {
-            height: 2px;
-            background-color: #0074D9;
-            border: none;
-            width: 50%;
-            margin-top: 50px;
-            margin-bottom: 50px;
+        /* Tables (from blog) */
+        table {
+            margin: auto;
+            border-spacing: 0;
+        }
+
+        th, td {
+            padding: 0.5em;
+        }
+
+        th {
+            text-align: left;
+            border-bottom: 1px solid black;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .date {
+            text-align: right;
+            font-family: monospace;
+        }
+
+        /* Form */
+        details {
+            margin: 1em 0;
+            padding: 1em;
+            border: 1px dashed black;
+        }
+
+        form {
+            margin: 1em;
+        }
+
+        label {
+            display: block;
+            font-family: monospace;
+            font-size: small;
+            color: grey;
+        }
+
+        .form-group {
+            margin-bottom: 0.5em;
+        }
+
+        input {
+            width: 180px;
+        }
+
+        textarea {
+            width: 360px;
+            font-family: sans-serif;
         }
     </style>
 </head>
 
-<h1 class="title">tir</h1>
-<p><a href="https://github.com/lukasschwab/tiir">GitHub</a> &middot; <a href="/texts/feed.json">JSON Feed</a></p>
+<a href="https://github.com/lukasschwab/tiir">GitHub</a> &middot; <a href="/texts/feed.json">JSON Feed</a>
 
-<form id="textForm" 
-    hx-post="/texts" 
-    hx-target="this" 
-    hx-swap="none" 
-    hx-trigger="submit" 
-    hx-on="htmx:afterRequest: window.location.reload()"
->
-    <div class="form-group row">
-        <label for="url">URL</label>
-        <input type="url" class="form-control" id="url" name="url" placeholder="Enter URL" required>
-    </div>
-    <div class="form-group row">
-        <label for="author">Author</label>
-        <input type="text" class="form-control" id="author" name="author" placeholder="Enter Author" required>
-    </div>
-    <div class="form-group row">
-        <label for="title">Title</label>
-        <input type="text" class="form-control" id="title" name="title" placeholder="Enter Title" required>
-    </div>
-    <div class="form-group row">
-        <label for="note">Note</label>
-        <textarea class="form-control" id="note" name="note" placeholder="Enter Note" rows="3"></textarea>
-    </div>
-    <button type="submit" class="btn btn-primary">Submit</button>
-</form>
+<header>
+    <h1>tir</h1>
+</header>
 
-<hr/>
+<details>
+    <summary>Create a new text...</summary>
+    <form id="textForm" 
+        hx-post="/texts" 
+        hx-target="this" 
+        hx-swap="none" 
+        hx-trigger="submit" 
+        hx-on="htmx:afterRequest: window.location.reload()"
+    >
+        <div class="form-group">
+            <label for="url">URL</label>
+            <input type="url" class="form-control" id="url" name="url" required>
+        </div>
+        <div class="form-group">
+            <label for="title">Title</label>
+            <input type="text" class="form-control" id="title" name="title" required>
+        </div>
+        <div class="form-group">
+            <label for="author">Author</label>
+            <input type="text" class="form-control" id="author" name="author" required>
+        </div>
+        <div class="form-group">
+            <label for="note">Note</label>
+            <textarea class="form-control" id="note" name="note" rows="3"></textarea>
+        </div>
+        <label>Submit</label>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</details>
 
 <table class="table">
     <tr>
         <th>Title</th>
         <th>Author</th>
         <th>Note</th>
-        <th>Date</th>
+        <th class="date">Date</th>
     </tr>
     {{ range . }}
-        <td colspan="4"><h3>{{ .Key }}</h3></td>
+        <!-- <td colspan="4" class="divider" style="border-bottom: 1px solid black;"></td> -->
+        <!-- <td colspan="4"><h3>{{ .Key }}</h3></td> -->
         {{range .Texts}}
-            <tr>
+            <tr id="{{.ID}}">
                 <td><a href="{{.URL}}">{{.Title}}</a></td>
                 <td>{{.Author}}</td>
                 <td>{{.Note}}</td>
-                <td>{{printf "%d-%02d-%02d" (.Timestamp.Year) (.Timestamp.Month) (.Timestamp.Day)}}</td>
+                <td class="date">{{printf "%d-%02d-%02d" (.Timestamp.Year) (.Timestamp.Month) (.Timestamp.Day)}}</td>
             </tr>
         {{end}}
     {{ end }}
