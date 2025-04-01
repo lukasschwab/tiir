@@ -53,6 +53,10 @@ func main() {
 		rendererKeys = append(rendererKeys, k)
 	}
 
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.Redirect("/texts")
+	})
+
 	// List all texts.
 	app.Get("/texts", func(c *fiber.Ctx) error {
 		texts, err := cfg.App.List()
