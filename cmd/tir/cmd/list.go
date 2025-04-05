@@ -14,7 +14,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var output string
+var (
+	output  string
+	idStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+)
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
@@ -90,6 +93,7 @@ var outputRenderers = map[outputFormat]renderFunc{
 func renderTea(texts []*text.Text, cmd *cobra.Command) (*text.Text, error) {
 	m := model{list: list.New(items(texts), list.NewDefaultDelegate(), 0, 0)}
 	m.list.Title = "Articles"
+	m.list.Filter = list.UnsortedFilter
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	finalModel, err := p.Run()
 	return finalModel.(model).finalSelection.Text, err
@@ -109,7 +113,11 @@ type item struct {
 	*text.Text
 }
 
-func (i item) Title() string       { return fmt.Sprintf("[%v] %v", i.Text.ID, i.Text.Title) }
+func (i item) Title() string {
+	date := idStyle.Render(i.Text.Timestamp.Format("06-01-02"))
+	return fmt.Sprintf("%s %v", date, i.Text.Title)
+}
+
 func (i item) Description() string { return i.Text.Note }
 func (i item) FilterValue() string { return i.Title() }
 
