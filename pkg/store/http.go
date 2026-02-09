@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/lukasschwab/tiir/pkg/text"
 )
 
@@ -47,9 +46,9 @@ func (h *HTTP) newRequest(method string, body io.Reader, path ...string) (*http.
 	if err != nil {
 		return req, err
 	}
-	req.Header.Add(fiber.HeaderContentType, "application/json")
+	req.Header.Add("Content-Type", "application/json")
 	if h.apiSecret != "" {
-		req.Header.Add(fiber.HeaderAuthorization, fmt.Sprintf("Bearer %s", h.apiSecret))
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", h.apiSecret))
 	}
 	return req, nil
 }
