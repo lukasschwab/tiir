@@ -1,6 +1,0 @@
-version: v1.63.4
-plugins:
-  - module: 'github.com/lukasschwab/nilinterface'
-    import: 'github.com/lukasschwab/nilinterface/pkg/golangci-linter'
-    version: v0.0.6
-
