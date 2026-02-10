@@ -1,0 +1,9 @@
+version: "2"
+linters:
+  disable:
+    - errcheck
+  settings:
+    staticcheck:
+      checks:
+        - "all"
+        - "-QF*"
