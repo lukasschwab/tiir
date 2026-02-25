@@ -2,4 +2,4 @@
 *.db
 .vscode
 custom-gcl
-server
+/server
