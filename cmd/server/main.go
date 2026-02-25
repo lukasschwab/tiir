@@ -29,6 +29,15 @@ var (
 		"html":                  render.HTML,
 		"text/html":             render.HTML,
 	}
+
+	// acceptPrecedence defines a deterministic order for Accept header
+	// negotiation, checked against the formatRenderers map.
+	acceptPrecedence = []string{
+		"application/json",
+		"application/feed+json",
+		"text/plain",
+		"text/html",
+	}
 )
 
 func main() {
@@ -36,28 +45,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}
-	defer cfg.App.Close()
 
 	apiSecret := cfg.GetAPISecret()
 
 	mux := http.NewServeMux()
 
 	// Root redirect.
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			http.Redirect(w, r, "/texts", http.StatusFound)
-			return
-		}
-		http.NotFound(w, r)
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/texts", http.StatusFound)
 	})
 
 	// List all texts.
-	mux.HandleFunc("/texts", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
+	mux.HandleFunc("GET /texts", func(w http.ResponseWriter, r *http.Request) {
 		texts, err := cfg.App.List()
 		if err != nil {
 			log.Printf("error listing texts: %v", err)
@@ -80,15 +79,14 @@ func main() {
 		// Fall back on Accept header.
 		acceptHeader := r.Header.Get("Accept")
 		if acceptHeader != "" {
-			for contentType := range formatRenderers {
+			for _, contentType := range acceptPrecedence {
 				if strings.Contains(acceptHeader, contentType) {
-					if renderer, ok := formatRenderers[contentType]; ok {
-						w.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", contentType))
-						if err := renderer(texts, w); err != nil {
-							log.Printf("error rendering: %v", err)
-						}
-						return
+					renderer := formatRenderers[contentType]
+					w.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", contentType))
+					if err := renderer(texts, w); err != nil {
+						log.Printf("error rendering: %v", err)
 					}
+					return
 				}
 			}
 		}
@@ -101,12 +99,7 @@ func main() {
 	})
 
 	// Dedicated route for the JSON feed.
-	mux.HandleFunc("/texts/feed.json", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
+	mux.HandleFunc("GET /texts/feed.json", func(w http.ResponseWriter, r *http.Request) {
 		texts, err := cfg.App.List()
 		if err != nil {
 			log.Printf("error listing texts: %v", err)
@@ -120,104 +113,87 @@ func main() {
 		}
 	})
 
-	// Create, get, update, delete text by ID (or create if no ID).
-	mux.HandleFunc("/texts/", func(w http.ResponseWriter, r *http.Request) {
-		// Extract ID from path /texts/:id
-		path := strings.TrimPrefix(r.URL.Path, "/texts/")
-		id := strings.TrimSuffix(path, "/")
+	// Create text.
+	mux.HandleFunc("POST /texts", func(w http.ResponseWriter, r *http.Request) {
+		t := new(text.Text)
+		if err := json.NewDecoder(r.Body).Decode(t); err != nil {
+			http.Error(w, fmt.Sprintf("error parsing request body: %v", err), http.StatusBadRequest)
+			return
+		}
 
-		switch r.Method {
-		case http.MethodPost:
-			// Create text.
-			t := new(text.Text)
-			if err := json.NewDecoder(r.Body).Decode(t); err != nil {
-				http.Error(w, fmt.Sprintf("error parsing request body: %v", err), http.StatusBadRequest)
-				return
-			}
+		created, err := cfg.App.Create(t)
+		if err != nil {
+			log.Printf("error writing record: %v", err)
+			http.Error(w, fmt.Sprintf("error writing record: %v", err), http.StatusInternalServerError)
+			return
+		}
 
-			created, err := cfg.App.Create(t)
-			if err != nil {
-				log.Printf("error writing record: %v", err)
-				http.Error(w, fmt.Sprintf("error writing record: %v", err), http.StatusInternalServerError)
-				return
-			}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(created); err != nil {
+			log.Printf("error encoding response: %v", err)
+		}
+	})
 
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusCreated)
-			if err := json.NewEncoder(w).Encode(created); err != nil {
-				log.Printf("error encoding response: %v", err)
-			}
+	// Get text by ID.
+	mux.HandleFunc("GET /texts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
 
-		case http.MethodGet:
-			// Get text by ID.
-			if id == "" {
-				http.Error(w, "request must specify record ID", http.StatusBadRequest)
-				return
-			}
+		t, err := cfg.App.Read(id)
+		if err != nil {
+			// BODGE: assume the text wasn't found. Makes upsert-adaptation in
+			// store.http easier.
+			log.Printf("error getting record: %v", err)
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
 
-			t, err := cfg.App.Read(id)
-			if err != nil {
-				// BODGE: assume the text wasn't found. Makes upsert-adaptation in
-				// store.http easier.
-				log.Printf("error getting record: %v", err)
-				http.Error(w, "Not found", http.StatusNotFound)
-				return
-			}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(t); err != nil {
+			log.Printf("error encoding response: %v", err)
+		}
+	})
 
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(t); err != nil {
-				log.Printf("error encoding response: %v", err)
-			}
+	// Update text by ID.
+	mux.HandleFunc("PATCH /texts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
 
-		case http.MethodPatch:
-			// Update text by ID.
-			if id == "" {
-				http.Error(w, "update request must specify record ID", http.StatusBadRequest)
-				return
-			}
+		updates := new(text.Text)
+		if err := json.NewDecoder(r.Body).Decode(updates); err != nil {
+			http.Error(w, fmt.Sprintf("error parsing request body: %v", err), http.StatusBadRequest)
+			return
+		}
 
-			updates := new(text.Text)
-			if err := json.NewDecoder(r.Body).Decode(updates); err != nil {
-				http.Error(w, fmt.Sprintf("error parsing request body: %v", err), http.StatusBadRequest)
-				return
-			}
+		updated, err := cfg.App.Update(id, updates)
+		if err != nil {
+			log.Printf("error updating record: %v", err)
+			http.Error(w, fmt.Sprintf("error updating record: %v", err), http.StatusInternalServerError)
+			return
+		}
 
-			updated, err := cfg.App.Update(id, updates)
-			if err != nil {
-				log.Printf("error updating record: %v", err)
-				http.Error(w, fmt.Sprintf("error updating record: %v", err), http.StatusInternalServerError)
-				return
-			}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(updated); err != nil {
+			log.Printf("error encoding response: %v", err)
+		}
+	})
 
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(updated); err != nil {
-				log.Printf("error encoding response: %v", err)
-			}
+	// Delete text by ID.
+	mux.HandleFunc("DELETE /texts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
 
-		case http.MethodDelete:
-			// Delete text by ID.
-			if id == "" {
-				http.Error(w, "delete request must specify record ID", http.StatusBadRequest)
-				return
-			}
+		deleted, err := cfg.App.Delete(id)
+		if err != nil {
+			log.Printf("error deleting record: %v", err)
+			http.Error(w, fmt.Sprintf("error deleting record: %v", err), http.StatusInternalServerError)
+			return
+		}
 
-			deleted, err := cfg.App.Delete(id)
-			if err != nil {
-				log.Printf("error deleting record: %v", err)
-				http.Error(w, fmt.Sprintf("error deleting record: %v", err), http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(deleted); err != nil {
-				log.Printf("error encoding response: %v", err)
-			}
-
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(deleted); err != nil {
+			log.Printf("error encoding response: %v", err)
 		}
 	})
 
