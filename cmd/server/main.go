@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -16,6 +17,9 @@ import (
 	"github.com/lukasschwab/tiir/pkg/render"
 	"github.com/lukasschwab/tiir/pkg/text"
 )
+
+//go:embed static
+var staticFS embed.FS
 
 var (
 	// Bodged aliasing for List request render formats. Roughly correspond to
@@ -202,9 +206,7 @@ func main() {
 		}
 	})
 
-	// Static file serving.
-	fs := http.FileServer(http.Dir("./static"))
-	mux.Handle("/static/", http.StripPrefix("/static", fs))
+	mux.Handle("/static/", http.FileServer(http.FS(staticFS)))
 
 	// Wrap with middleware.
 	handler := loggingMiddleware(authMiddleware(apiSecret, mux))
