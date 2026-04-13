@@ -36,8 +36,6 @@ func authMiddleware(apiSecret string, next http.Handler) http.Handler {
 		requestKey := strings.TrimPrefix(authHeader, "Bearer ")
 		requestKey = strings.TrimSpace(requestKey)
 
-		log.Printf("requestKey: %v", requestKey)
-
 		// Compare hashes using constant-time comparison.
 		hashedAPIKey := sha256.Sum256([]byte(apiSecret))
 		hashedRequestKey := sha256.Sum256([]byte(requestKey))
