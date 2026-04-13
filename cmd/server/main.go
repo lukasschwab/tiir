@@ -45,6 +45,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}
+	defer func() {
+		if err := cfg.App.Close(); err != nil {
+			log.Printf("Error closing service: %v", err)
+		}
+	}()
 
 	apiSecret := cfg.GetAPISecret()
 
@@ -209,19 +214,20 @@ func main() {
 		Handler: handler,
 	}
 
+	// Wait for interrupt signal or a fatal server error.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
 	// Start server in a goroutine.
 	go func() {
 		log.Printf("Server starting on :8080")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("shutting down: %v", err)
+			log.Printf("Server error: %v", err)
+			c <- syscall.SIGTERM
 		}
 	}()
 
-	// Wait for interrupt signal.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
-	<-c // Block main thread until interrupt.
+	<-c // Block main thread until interrupt or server error.
 	log.Printf("Gracefully shutting down...")
 
 	// Graceful shutdown with timeout.
@@ -232,8 +238,5 @@ func main() {
 		log.Printf("Server forced to shutdown: %v", err)
 	}
 
-	if err := cfg.App.Close(); err != nil {
-		log.Printf("Error closing service: %v", err)
-	}
 	log.Printf("Shutdown")
 }
