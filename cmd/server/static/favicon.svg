@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  
+  <style>
+    text {
+      font-family: sans-serif;
+      fill: #000000;
+      font-size: 102.70812437311936px;
+      /* Default dominant-baseline (auto/alphabetic) and text-anchor (start) are used */
+    }
+  </style>
+  <text x="8.074222668004012" y="100" transform="rotate(0, 50, 50)">ᑏ</text>
+</svg>
