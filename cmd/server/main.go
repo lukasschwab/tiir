@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -214,27 +213,26 @@ func main() {
 		Handler: handler,
 	}
 
-	// Wait for interrupt signal or a fatal server error.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	// ctx is canceled on SIGINT/SIGTERM; stop() also cancels it, which we
+	// use to unify signal-driven and error-driven shutdown paths.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	// Start server in a goroutine.
 	go func() {
 		log.Printf("Server starting on :8080")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Printf("Server error: %v", err)
-			c <- syscall.SIGTERM
+			stop()
 		}
 	}()
 
-	<-c // Block main thread until interrupt or server error.
-	log.Printf("Gracefully shutting down...")
+	<-ctx.Done()
+	log.Printf("Gracefully shutting down: %v", context.Cause(ctx))
 
-	// Graceful shutdown with timeout.
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("Server forced to shutdown: %v", err)
 	}
 
