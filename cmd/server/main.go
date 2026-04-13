@@ -1,17 +1,17 @@
 package main
 
 import (
-	"errors"
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/keyauth/v2"
 	"github.com/lukasschwab/tiir/pkg/config"
 	"github.com/lukasschwab/tiir/pkg/render"
 	"github.com/lukasschwab/tiir/pkg/text"
@@ -29,154 +29,214 @@ var (
 		"html":                  render.HTML,
 		"text/html":             render.HTML,
 	}
+
+	// acceptPrecedence defines a deterministic order for Accept header
+	// negotiation, checked against the formatRenderers map.
+	acceptPrecedence = []string{
+		"application/json",
+		"application/feed+json",
+		"text/plain",
+		"text/html",
+	}
 )
 
 func main() {
-	app := fiber.New()
-
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}
-	defer cfg.App.Close()
-
-	app.Use(logger.New())
+	defer func() {
+		if err := cfg.App.Close(); err != nil {
+			log.Printf("Error closing service: %v", err)
+		}
+	}()
 
 	apiSecret := cfg.GetAPISecret()
-	app.Use(keyauth.New(keyauth.Config{
-		Filter:    filter(apiSecret),
-		Validator: validator(apiSecret),
-	}))
 
-	rendererKeys := make([]string, 0, len(formatRenderers))
-	for k := range formatRenderers {
-		rendererKeys = append(rendererKeys, k)
-	}
+	mux := http.NewServeMux()
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Redirect("/texts")
+	// Root redirect.
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/texts", http.StatusFound)
 	})
 
 	// List all texts.
-	app.Get("/texts", func(c *fiber.Ctx) error {
+	mux.HandleFunc("GET /texts", func(w http.ResponseWriter, r *http.Request) {
 		texts, err := cfg.App.List()
 		if err != nil {
-			return fmt.Errorf("error listing texts: %w", err)
+			log.Printf("error listing texts: %v", err)
+			http.Error(w, fmt.Sprintf("error listing texts: %v", err), http.StatusInternalServerError)
+			return
 		}
 
-		for _, accepts := range []string{
-			// Prefer an explicitly-requested format in the URL query.
-			c.Query("format"),
-			// Fall back on Accepts header.
-			c.Accepts(rendererKeys...),
-		} {
-			if renderer, ok := formatRenderers[accepts]; ok {
-				c.Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", accepts))
-				return renderer(texts, c)
+		// Check for format query parameter first.
+		format := r.URL.Query().Get("format")
+		if format != "" {
+			if renderer, ok := formatRenderers[format]; ok {
+				w.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", format))
+				if err := renderer(texts, w); err != nil {
+					log.Printf("error rendering: %v", err)
+				}
+				return
+			}
+		}
+
+		// Fall back on Accept header.
+		acceptHeader := r.Header.Get("Accept")
+		if acceptHeader != "" {
+			for _, contentType := range acceptPrecedence {
+				if strings.Contains(acceptHeader, contentType) {
+					renderer := formatRenderers[contentType]
+					w.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", contentType))
+					if err := renderer(texts, w); err != nil {
+						log.Printf("error rendering: %v", err)
+					}
+					return
+				}
 			}
 		}
 
 		// Fall back on HTML.
-		c.Set("Content-Type", "text/html; charset=utf-8")
-		return render.HTML(texts, c)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := render.HTML(texts, w); err != nil {
+			log.Printf("error rendering HTML: %v", err)
+		}
 	})
 
 	// Dedicated route for the JSON feed.
-	app.Get("/texts/feed.json", func(c *fiber.Ctx) error {
+	mux.HandleFunc("GET /texts/feed.json", func(w http.ResponseWriter, r *http.Request) {
 		texts, err := cfg.App.List()
 		if err != nil {
-			return fmt.Errorf("error listing texts: %w", err)
+			log.Printf("error listing texts: %v", err)
+			http.Error(w, fmt.Sprintf("error listing texts: %v", err), http.StatusInternalServerError)
+			return
 		}
 
-		c.Set("Content-Type", "application/feed+json; charset=utf-8")
-		return render.JSONFeed(texts, c)
+		w.Header().Set("Content-Type", "application/feed+json; charset=utf-8")
+		if err := render.JSONFeed(texts, w); err != nil {
+			log.Printf("error rendering JSON feed: %v", err)
+		}
 	})
 
 	// Create text.
-	app.Post("/texts", func(c *fiber.Ctx) error {
+	mux.HandleFunc("POST /texts", func(w http.ResponseWriter, r *http.Request) {
 		t := new(text.Text)
-		if err := c.BodyParser(t); err != nil {
-			c.Status(fiber.StatusBadRequest)
-			return fmt.Errorf("error parsing request body: %w", err)
+		if err := json.NewDecoder(r.Body).Decode(t); err != nil {
+			http.Error(w, fmt.Sprintf("error parsing request body: %v", err), http.StatusBadRequest)
+			return
 		}
 
 		created, err := cfg.App.Create(t)
 		if err != nil {
-			return fmt.Errorf("error writing record: %w", err)
+			log.Printf("error writing record: %v", err)
+			http.Error(w, fmt.Sprintf("error writing record: %v", err), http.StatusInternalServerError)
+			return
 		}
-		return c.Status(fiber.StatusCreated).JSON(created)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(created); err != nil {
+			log.Printf("error encoding response: %v", err)
+		}
 	})
 
 	// Get text by ID.
-	app.Get("/texts/:id", func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		if id == "" {
-			c.Status(fiber.StatusBadRequest)
-			return errors.New("update request must specify record ID")
-		}
+	mux.HandleFunc("GET /texts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
 
 		t, err := cfg.App.Read(id)
 		if err != nil {
 			// BODGE: assume the text wasn't found. Makes upsert-adaptation in
 			// store.http easier.
 			log.Printf("error getting record: %v", err)
-			return c.SendStatus(fiber.StatusNotFound)
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
 		}
-		return c.Status(fiber.StatusOK).JSON(t)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(t); err != nil {
+			log.Printf("error encoding response: %v", err)
+		}
 	})
 
 	// Update text by ID.
-	app.Patch("/texts/:id", func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		if id == "" {
-			c.Status(fiber.StatusBadRequest)
-			return errors.New("update request must specify record ID")
-		}
+	mux.HandleFunc("PATCH /texts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
 
 		updates := new(text.Text)
-		if err := c.BodyParser(updates); err != nil {
-			c.Status(fiber.StatusBadRequest)
-			return fmt.Errorf("error parsing request body: %w", err)
+		if err := json.NewDecoder(r.Body).Decode(updates); err != nil {
+			http.Error(w, fmt.Sprintf("error parsing request body: %v", err), http.StatusBadRequest)
+			return
 		}
 
 		updated, err := cfg.App.Update(id, updates)
 		if err != nil {
-			return fmt.Errorf("error updating record: %w", err)
+			log.Printf("error updating record: %v", err)
+			http.Error(w, fmt.Sprintf("error updating record: %v", err), http.StatusInternalServerError)
+			return
 		}
-		return c.Status(fiber.StatusOK).JSON(updated)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(updated); err != nil {
+			log.Printf("error encoding response: %v", err)
+		}
 	})
 
 	// Delete text by ID.
-	app.Delete("/texts/:id", func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		if id == "" {
-			c.Status(fiber.StatusBadRequest)
-			return errors.New("update request must specify record ID")
-		}
+	mux.HandleFunc("DELETE /texts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
 
 		deleted, err := cfg.App.Delete(id)
 		if err != nil {
-			return fmt.Errorf("error deleting record: %w", err)
+			log.Printf("error deleting record: %v", err)
+			http.Error(w, fmt.Sprintf("error deleting record: %v", err), http.StatusInternalServerError)
+			return
 		}
-		return c.Status(fiber.StatusOK).JSON(deleted)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(deleted); err != nil {
+			log.Printf("error encoding response: %v", err)
+		}
 	})
 
-	app.Static("/static", "./static")
+	// Static file serving.
+	fs := http.FileServer(http.Dir("./static"))
+	mux.Handle("/static/", http.StripPrefix("/static", fs))
 
-	go func() {
-		if err := app.Listen(":8080"); err != nil {
-			log.Fatalf("shutting down: %v", err)
-		}
-	}()
+	// Wrap with middleware.
+	handler := loggingMiddleware(authMiddleware(apiSecret, mux))
 
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: handler,
+	}
+
+	// Wait for interrupt signal or a fatal server error.
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	<-c // Block main thread until interrupt.
+	// Start server in a goroutine.
+	go func() {
+		log.Printf("Server starting on :8080")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("Server error: %v", err)
+			c <- syscall.SIGTERM
+		}
+	}()
+
+	<-c // Block main thread until interrupt or server error.
 	log.Printf("Gracefully shutting down...")
-	_ = app.ShutdownWithTimeout(5 * time.Second)
-	if err := cfg.App.Close(); err != nil {
-		log.Printf("Error closing service: %v", err)
+
+	// Graceful shutdown with timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
 	}
+
 	log.Printf("Shutdown")
 }
