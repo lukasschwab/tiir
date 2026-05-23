@@ -16,7 +16,7 @@ import (
 func startLocalLibSQL(t testing.TB) *SQL {
 	// Initialize an empty DB. In future tests, could initiate a non-empty one
 	// for testing (e.g. with existing table, entries).
-	emptyFile, err := os.CreateTemp(t.TempDir(), "*.db")
+	emptyFile, err := os.CreateTemp(t.ArtifactDir(), "*.db")
 	assert.NoError(t, err)
 	t.Logf("Using DB at file %v", emptyFile.Name())
 

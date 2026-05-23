@@ -11,7 +11,7 @@ import (
 func TestUseFile(t *testing.T) {
 	assert.Implements(t, (*Interface)(nil), &File{})
 
-	db, err := os.CreateTemp(t.TempDir(), "*.json")
+	db, err := os.CreateTemp(t.ArtifactDir(), "*.json")
 	assert.NoError(t, err)
 	assert.NoError(t, db.Close())
 
