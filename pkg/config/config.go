@@ -80,8 +80,8 @@ type envValues struct {
 // Load constructs a configured application from the supplied lookupers. Values
 // are applied in this order: defaults, /etc/tir/.tir.config,
 // $HOME/.tir.config, and lookupers in priority order.
-func Load(lookupers ...envconfig.Lookuper) (*Config, error) {
-	return load(configPaths(), lookupers)
+func Load(lookuper envconfig.Lookuper, fallbacks ...envconfig.Lookuper) (*Config, error) {
+	return load(configPaths(), append([]envconfig.Lookuper{lookuper}, fallbacks...))
 }
 
 // load constructs a configured application using the supplied configuration
@@ -89,9 +89,6 @@ func Load(lookupers ...envconfig.Lookuper) (*Config, error) {
 // letting tests use isolated files and map-backed values rather than mutating
 // process state.
 func load(paths []string, lookupers []envconfig.Lookuper) (*Config, error) {
-	if len(lookupers) == 0 {
-		lookupers = []envconfig.Lookuper{envconfig.OsLookuper()}
-	}
 	lookuper := envconfig.MultiLookuper(lookupers...)
 
 	v := defaultValues()

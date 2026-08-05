@@ -15,6 +15,7 @@ import (
 	"github.com/lukasschwab/tiir/pkg/config"
 	"github.com/lukasschwab/tiir/pkg/render"
 	"github.com/lukasschwab/tiir/pkg/text"
+	"github.com/sethvargo/go-envconfig"
 )
 
 //go:embed static
@@ -44,7 +45,7 @@ var (
 )
 
 func main() {
-	cfg, err := config.Load()
+	cfg, err := config.Load(envconfig.OsLookuper())
 	if err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}

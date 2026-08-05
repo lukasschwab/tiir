@@ -5,10 +5,11 @@ import (
 
 	"github.com/lukasschwab/tiir/pkg/config"
 	"github.com/lukasschwab/tiir/pkg/store"
+	"github.com/sethvargo/go-envconfig"
 )
 
 func main() {
-	cfg, err := config.Load()
+	cfg, err := config.Load(envconfig.OsLookuper())
 	if err != nil {
 		log.Fatalf("Failed loading configured (origin) store: %v", err)
 	}
