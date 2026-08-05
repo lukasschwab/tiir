@@ -45,7 +45,7 @@ func TestLoadHigherPriorityLookuperWins(t *testing.T) {
 		[]envconfig.Lookuper{
 			envconfig.MapLookuper(map[string]string{
 				"TIR_API_SECRET": "from-primary",
-				"TIR_TYPE":       "memory",
+				"TIR_STORE_TYPE": "memory",
 			}),
 			envconfig.MapLookuper(map[string]string{"TIR_API_SECRET": "from-fallback"}),
 		},

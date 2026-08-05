@@ -43,9 +43,6 @@ func (cli CLI) configLookuper() envconfig.Lookuper {
 		}
 	}
 
-	// Set both spellings so a CLI flag outranks either supported environment
-	// variable alias.
-	put("TIR_TYPE", cli.Store)
 	put("TIR_STORE_TYPE", cli.Store)
 	put("TIR_STORE_PATH", cli.FileLocation)
 	put("TIR_STORE_BASE_URL", cli.BaseURL)

@@ -95,7 +95,7 @@ func newFileLookuper(path string) (envconfig.Lookuper, error) {
 		}
 	}
 	if file.Store != nil {
-		put("TIR_TYPE", file.Store.Type)
+		put("TIR_STORE_TYPE", file.Store.Type)
 		put("TIR_STORE_PATH", file.Store.Path)
 		put("TIR_STORE_BASE_URL", file.Store.BaseURL)
 		put("TIR_API_SECRET", file.Store.APISecret)
@@ -106,8 +106,7 @@ func newFileLookuper(path string) (envconfig.Lookuper, error) {
 }
 
 type envValues struct {
-	StoreType        *string `env:"TIR_TYPE,noinit"`
-	StoreTypeNested  *string `env:"TIR_STORE_TYPE,noinit"`
+	StoreType        *string `env:"TIR_STORE_TYPE,noinit"`
 	FileLocation     *string `env:"TIR_STORE_PATH,noinit"`
 	BaseURL          *string `env:"TIR_STORE_BASE_URL,noinit"`
 	APISecret        *string `env:"TIR_API_SECRET,noinit"`
@@ -156,8 +155,8 @@ func load(paths []string, lookupers []envconfig.Lookuper) (*Config, error) {
 
 func defaultLookuper() envconfig.Lookuper {
 	values := map[string]string{
-		"TIR_TYPE":   string(StoreTypeFile),
-		"TIR_EDITOR": string(EditorTypeTea),
+		"TIR_STORE_TYPE": string(StoreTypeFile),
+		"TIR_EDITOR":     string(EditorTypeTea),
 	}
 	if home, err := os.UserHomeDir(); err == nil {
 		values["TIR_STORE_PATH"] = filepath.Join(home, ".tir.json")
@@ -176,10 +175,7 @@ func configPaths() []string {
 func valuesFrom(env envValues) values {
 	var values values
 
-	// TIR_TYPE is the legacy Viper spelling. TIR_STORE_TYPE is accepted as a
-	// more descriptive alias, with the latter taking precedence when both exist.
 	apply(&values.Store.Type, env.StoreType)
-	apply(&values.Store.Type, env.StoreTypeNested)
 	apply(&values.Store.Path, env.FileLocation)
 	apply(&values.Store.BaseURL, env.BaseURL)
 	apply(&values.Store.APISecret, env.APISecret)
