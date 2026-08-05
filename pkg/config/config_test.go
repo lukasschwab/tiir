@@ -1,6 +1,8 @@
 package config
 
 import (
+	"encoding/json"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,6 +26,36 @@ func TestLoadLookupersOverrideConfigFileInPriorityOrder(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, cfg.App.Close()) })
 	assert.Equal(t, "from-primary", cfg.GetAPISecret())
+}
+
+func TestMaskedJSONMasksAPISecret(t *testing.T) {
+	cfg, err := load(
+		nil,
+		[]envconfig.Lookuper{envconfig.MapLookuper(map[string]string{
+			"TIR_STORE_TYPE":        "http",
+			"TIR_STORE_BASE_URL":    "https://example.test",
+			"TIR_API_SECRET":        "not-for-output",
+			"TIR_CONNECTION_STRING": "libsql://example.turso.io?authToken=also-not-for-output",
+		})},
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, cfg.App.Close()) })
+
+	contents, err := cfg.MaskedJSON()
+	require.NoError(t, err)
+
+	var output values
+	require.NoError(t, json.Unmarshal(contents, &output))
+	assert.Equal(t, "http", output.Store.Type)
+	assert.Equal(t, cfg.values.Store.Path, output.Store.Path)
+	assert.Equal(t, "https://example.test", output.Store.BaseURL)
+	assert.Equal(t, maskedSecret, output.Store.APISecret)
+	connectionString, err := url.Parse(output.Store.ConnectionString)
+	require.NoError(t, err)
+	assert.Equal(t, maskedSecret, connectionString.Query().Get("authToken"))
+	assert.Equal(t, "tea", output.Editor)
+	assert.NotContains(t, string(contents), "not-for-output")
+	assert.NotContains(t, string(contents), "also-not-for-output")
 }
 
 func TestLoadLaterConfigFileOverridesEarlierConfigFile(t *testing.T) {

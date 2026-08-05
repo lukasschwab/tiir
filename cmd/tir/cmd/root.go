@@ -25,6 +25,7 @@ type CLI struct {
 
 	Create  CreateCommand  `cmd:"" help:"Record a text you read."`
 	List    ListCommand    `cmd:"" help:"List all the texts you recorded reading."`
+	Config  ConfigCommand  `cmd:"" help:"Print the resolved configuration."`
 	Update  UpdateCommand  `cmd:"" aliases:"edit" help:"Update your record of a text you read."`
 	Delete  DeleteCommand  `cmd:"" help:"Delete your record of a text you read."`
 	Migrate MigrateCommand `cmd:"" help:"Batch-create records from an existing tir HTML file."`
