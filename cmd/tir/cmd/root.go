@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/lukasschwab/tiir/pkg/config"
+	"github.com/sethvargo/go-envconfig"
 )
 
 // CLI describes tir's command line interface.
@@ -34,15 +35,21 @@ type runtime struct {
 	stdout io.Writer
 }
 
-func (cli CLI) overrides() config.Overrides {
-	return config.Overrides{
-		StoreType:        cli.Store,
-		FileLocation:     cli.FileLocation,
-		BaseURL:          cli.BaseURL,
-		APISecret:        cli.APISecret,
-		ConnectionString: cli.ConnectionString,
-		Editor:           cli.Editor,
+func (cli CLI) configLookuper() envconfig.Lookuper {
+	values := make(map[string]string)
+	put := func(key string, value *string) {
+		if value != nil {
+			values[key] = *value
+		}
 	}
+
+	put("TIR_STORE_TYPE", cli.Store)
+	put("TIR_STORE_PATH", cli.FileLocation)
+	put("TIR_STORE_BASE_URL", cli.BaseURL)
+	put("TIR_API_SECRET", cli.APISecret)
+	put("TIR_CONNECTION_STRING", cli.ConnectionString)
+	put("TIR_EDITOR", cli.Editor)
+	return envconfig.MapLookuper(values)
 }
 
 // Execute parses and executes the tir CLI.
@@ -67,7 +74,7 @@ $HOME/.tir.config, TIR_* environment variables, or the flags below.`),
 		log.SetOutput(io.Discard)
 	}
 
-	cfg, err := config.Load(cli.overrides())
+	cfg, err := config.Load(cli.configLookuper(), envconfig.OsLookuper())
 	if err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}

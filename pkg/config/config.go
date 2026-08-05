@@ -45,17 +45,6 @@ const (
 	EditorTypeHuh editorType = "huh"
 )
 
-// Overrides are command-line values. Nil fields leave lower-precedence sources
-// unchanged.
-type Overrides struct {
-	StoreType        *string
-	FileLocation     *string
-	BaseURL          *string
-	APISecret        *string
-	ConnectionString *string
-	Editor           *string
-}
-
 type values struct {
 	Store struct {
 		Type             string `json:"type"`
@@ -78,49 +67,101 @@ type fileValues struct {
 	Editor *string `json:"editor"`
 }
 
-type envValues struct {
-	StoreType        string `env:"TIR_TYPE"`
-	StoreTypeNested  string `env:"TIR_STORE_TYPE"`
-	FileLocation     string `env:"TIR_STORE_PATH"`
-	BaseURL          string `env:"TIR_STORE_BASE_URL"`
-	APISecret        string `env:"TIR_API_SECRET"`
-	ConnectionString string `env:"TIR_CONNECTION_STRING"`
-	Editor           string `env:"TIR_EDITOR"`
+type fileLookuper map[string]string
+
+func (lookuper fileLookuper) Lookup(key string) (string, bool) {
+	value, ok := lookuper[key]
+	return value, ok
 }
 
-// Load constructs a configured application. Values are applied in this order:
-// defaults, /etc/tir/.tir.config, $HOME/.tir.config, environment, and overrides.
-func Load(overrides ...Overrides) (*Config, error) {
-	v := defaultValues()
-	for _, path := range configPaths() {
-		if err := applyFile(&v, path); err != nil {
-			return nil, err
+func newFileLookuper(path string) (envconfig.Lookuper, error) {
+	contents, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read config file %q: %w", path, err)
+	}
+
+	var file fileValues
+	if err := json.Unmarshal(contents, &file); err != nil {
+		return nil, fmt.Errorf("parse config file %q: %w", path, err)
+	}
+
+	values := make(fileLookuper)
+	put := func(key string, value *string) {
+		if value != nil {
+			values[key] = *value
 		}
 	}
+	if file.Store != nil {
+		put("TIR_STORE_TYPE", file.Store.Type)
+		put("TIR_STORE_PATH", file.Store.Path)
+		put("TIR_STORE_BASE_URL", file.Store.BaseURL)
+		put("TIR_API_SECRET", file.Store.APISecret)
+		put("TIR_CONNECTION_STRING", file.Store.ConnectionString)
+	}
+	put("TIR_EDITOR", file.Editor)
+	return values, nil
+}
+
+type envValues struct {
+	StoreType        *string `env:"TIR_STORE_TYPE,noinit"`
+	FileLocation     *string `env:"TIR_STORE_PATH,noinit"`
+	BaseURL          *string `env:"TIR_STORE_BASE_URL,noinit"`
+	APISecret        *string `env:"TIR_API_SECRET,noinit"`
+	ConnectionString *string `env:"TIR_CONNECTION_STRING,noinit"`
+	Editor           *string `env:"TIR_EDITOR,noinit"`
+}
+
+// Load constructs a configured application from the supplied lookupers. Values
+// are applied in this order: defaults, /etc/tir/.tir.config,
+// $HOME/.tir.config, and lookupers in priority order.
+func Load(lookuper envconfig.Lookuper, fallbacks ...envconfig.Lookuper) (*Config, error) {
+	return load(configPaths(), append([]envconfig.Lookuper{lookuper}, fallbacks...))
+}
+
+// load constructs a configured application using the supplied configuration
+// paths and environment lookupers. Lookupers are evaluated in priority order,
+// letting tests use isolated files and map-backed values rather than mutating
+// process state.
+func load(paths []string, lookupers []envconfig.Lookuper) (*Config, error) {
+	sources := append([]envconfig.Lookuper{}, lookupers...)
+	for i := len(paths) - 1; i >= 0; i-- {
+		lookuper, err := newFileLookuper(paths[i])
+		if err != nil {
+			return nil, err
+		}
+		if lookuper != nil {
+			sources = append(sources, lookuper)
+		}
+	}
+	sources = append(sources, defaultLookuper())
 
 	var env envValues
-	if err := envconfig.Process(context.Background(), &env); err != nil {
+	if err := envconfig.ProcessWith(context.Background(), &envconfig.Config{
+		Target:   &env,
+		Lookuper: envconfig.MultiLookuper(sources...),
+	}); err != nil {
 		return nil, fmt.Errorf("read environment: %w", err)
 	}
-	applyEnv(&v, env)
-	for _, override := range overrides {
-		applyOverrides(&v, override)
-	}
 
-	cfg := &Config{values: v}
+	cfg := &Config{values: valuesFrom(env)}
 	if err := cfg.initialize(); err != nil {
 		return cfg, err
 	}
 	return cfg, nil
 }
 
-func defaultValues() values {
-	v := values{Editor: string(EditorTypeTea)}
-	v.Store.Type = string(StoreTypeFile)
-	if home, err := os.UserHomeDir(); err == nil {
-		v.Store.Path = filepath.Join(home, ".tir.json")
+func defaultLookuper() envconfig.Lookuper {
+	values := map[string]string{
+		"TIR_STORE_TYPE": string(StoreTypeFile),
+		"TIR_EDITOR":     string(EditorTypeTea),
 	}
-	return v
+	if home, err := os.UserHomeDir(); err == nil {
+		values["TIR_STORE_PATH"] = filepath.Join(home, ".tir.json")
+	}
+	return envconfig.MapLookuper(values)
 }
 
 func configPaths() []string {
@@ -131,54 +172,16 @@ func configPaths() []string {
 	return paths
 }
 
-func applyFile(v *values, path string) error {
-	contents, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("read config file %q: %w", path, err)
-	}
-	var file fileValues
-	if err := json.Unmarshal(contents, &file); err != nil {
-		return fmt.Errorf("parse config file %q: %w", path, err)
-	}
-	if file.Store != nil {
-		apply(&v.Store.Type, file.Store.Type)
-		apply(&v.Store.Path, file.Store.Path)
-		apply(&v.Store.BaseURL, file.Store.BaseURL)
-		apply(&v.Store.APISecret, file.Store.APISecret)
-		apply(&v.Store.ConnectionString, file.Store.ConnectionString)
-	}
-	apply(&v.Editor, file.Editor)
-	return nil
-}
+func valuesFrom(env envValues) values {
+	var values values
 
-func applyEnv(v *values, env envValues) {
-	// TIR_TYPE is the legacy Viper spelling. TIR_STORE_TYPE is accepted as a
-	// more descriptive alias, with the latter taking precedence when both exist.
-	applyEnvironment(&v.Store.Type, "TIR_TYPE", env.StoreType)
-	applyEnvironment(&v.Store.Type, "TIR_STORE_TYPE", env.StoreTypeNested)
-	applyEnvironment(&v.Store.Path, "TIR_STORE_PATH", env.FileLocation)
-	applyEnvironment(&v.Store.BaseURL, "TIR_STORE_BASE_URL", env.BaseURL)
-	applyEnvironment(&v.Store.APISecret, "TIR_API_SECRET", env.APISecret)
-	applyEnvironment(&v.Store.ConnectionString, "TIR_CONNECTION_STRING", env.ConnectionString)
-	applyEnvironment(&v.Editor, "TIR_EDITOR", env.Editor)
-}
-
-func applyEnvironment(destination *string, name, value string) {
-	if _, ok := os.LookupEnv(name); ok {
-		*destination = value
-	}
-}
-
-func applyOverrides(v *values, overrides Overrides) {
-	apply(&v.Store.Type, overrides.StoreType)
-	apply(&v.Store.Path, overrides.FileLocation)
-	apply(&v.Store.BaseURL, overrides.BaseURL)
-	apply(&v.Store.APISecret, overrides.APISecret)
-	apply(&v.Store.ConnectionString, overrides.ConnectionString)
-	apply(&v.Editor, overrides.Editor)
+	apply(&values.Store.Type, env.StoreType)
+	apply(&values.Store.Path, env.FileLocation)
+	apply(&values.Store.BaseURL, env.BaseURL)
+	apply(&values.Store.APISecret, env.APISecret)
+	apply(&values.Store.ConnectionString, env.ConnectionString)
+	apply(&values.Editor, env.Editor)
+	return values
 }
 
 func apply(destination *string, source *string) {
