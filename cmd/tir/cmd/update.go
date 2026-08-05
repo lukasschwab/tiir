@@ -2,35 +2,31 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
-
-	"github.com/spf13/cobra"
 )
 
-// updateCmd represents the update command
-var updateCmd = &cobra.Command{
-	Use:     "update",
-	Aliases: []string{"edit"},
-	Short:   "Update your record of a text you read",
-	Long: `Update a tir record by ID in the configured store. For store and editor options,
-see tir --help.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		if initial, err := cfg.App.Read(specifiedTextID); err != nil {
-			log.Fatalf("text not found for ID: '%v'", specifiedTextID)
-		} else if final, err := initial.EditWith(cfg.Editor); err != nil {
-			log.Fatalf("couldn't run editor: %v", err)
-		} else if updated, err := cfg.App.Update(specifiedTextID, final); err != nil {
-			log.Fatalf("error committing new record: %v", err)
-		} else if repr, err := json.MarshalIndent(updated, "", "\t"); err != nil {
-			log.Fatalf("error representing updated record '%v': %v", updated.ID, err)
-		} else {
-			log.Printf("successfully updated record %v: %s", updated.ID, repr)
-		}
-	},
+type UpdateCommand struct {
+	ID string `name:"id" required:"" help:"The record to update."`
 }
 
-func init() {
-	rootCmd.AddCommand(updateCmd)
-
-	requireID(updateCmd)
+func (command *UpdateCommand) Run(rt *runtime) error {
+	initial, err := rt.cfg.App.Read(command.ID)
+	if err != nil {
+		return fmt.Errorf("read record %q: %w", command.ID, err)
+	}
+	final, err := initial.EditWith(rt.cfg.Editor)
+	if err != nil {
+		return fmt.Errorf("run editor: %w", err)
+	}
+	updated, err := rt.cfg.App.Update(command.ID, final)
+	if err != nil {
+		return fmt.Errorf("update record: %w", err)
+	}
+	repr, err := json.MarshalIndent(updated, "", "\t")
+	if err != nil {
+		return fmt.Errorf("represent updated record %q: %w", updated.ID, err)
+	}
+	log.Printf("successfully updated record %v: %s", updated.ID, repr)
+	return nil
 }

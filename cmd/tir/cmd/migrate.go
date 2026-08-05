@@ -8,51 +8,34 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/lukasschwab/tiir/pkg/text"
-	"github.com/spf13/cobra"
 )
 
-var fromFilename string
-
-// migrateCmd represents the migrate command
-var migrateCmd = &cobra.Command{
-	Use:   "migrate",
-	Short: "Batch-create records from an existing tir HTML file",
-	Long: `Useful for switching stores, or for importing tir records
-from legacy tir. It's recommended you migrate with the
---verbose flag set as a progress indicator.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		var p *BrittleParser
-		if f, err := os.Open(fromFilename); err != nil {
-			log.Fatalf("error opening file: %v", err)
-		} else if p, err = NewParser(f); err != nil {
-			log.Fatalf("error initializing parser: %v", err)
-		}
-
-		// p.Parse may call os.Exit for invalid input.
-		p.Parse()
-
-		log.Printf("Writing %v texts to app", len(p.parsed))
-
-		for _, t := range p.parsed {
-			created, err := cfg.App.Create(t)
-			if err != nil {
-				log.Printf("Error creating text: %v", err)
-			}
-			log.Printf("Created text %v: %+v", created.ID, created)
-		}
-
-		log.Printf("Wrote %v texts to app", len(p.parsed))
-	},
+type MigrateCommand struct {
+	FromFilename string `short:"f" required:"" name:"from" help:"HTML file to migrate."`
 }
 
-func init() {
-	rootCmd.AddCommand(migrateCmd)
-
-	const flagFrom = "from"
-	migrateCmd.PersistentFlags().StringVarP(&fromFilename, flagFrom, "f", "", "filepath for HTML to migrate")
-	if err := migrateCmd.MarkPersistentFlagRequired(flagFrom); err != nil {
-		log.Fatalf("Error marking %v flag required: %v", flagFrom, err)
+func (command *MigrateCommand) Run(rt *runtime) error {
+	f, err := os.Open(command.FromFilename)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
 	}
+	defer f.Close()
+	p, err := NewParser(f)
+	if err != nil {
+		return fmt.Errorf("initialize parser: %w", err)
+	}
+
+	p.Parse()
+	log.Printf("Writing %v texts to app", len(p.parsed))
+	for _, text := range p.parsed {
+		created, err := rt.cfg.App.Create(text)
+		if err != nil {
+			return fmt.Errorf("create text: %w", err)
+		}
+		log.Printf("Created text %v: %+v", created.ID, created)
+	}
+	log.Printf("Wrote %v texts to app", len(p.parsed))
+	return nil
 }
 
 // NewParser constructs a new BrittleParser for f without parsing it. See

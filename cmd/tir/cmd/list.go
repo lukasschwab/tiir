@@ -3,51 +3,47 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"strings"
+	"io"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lukasschwab/tiir/pkg/render"
 	"github.com/lukasschwab/tiir/pkg/text"
-	"github.com/spf13/cobra"
 )
 
 var (
-	output  string
 	idStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 )
 
-// listCmd represents the list command
-var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all the texts you recorded reading",
-	Long: `List all tir records in the configured store. For store and editor options, see
-tir --help.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		renderFunc, ok := outputRenderers[outputFormat(output)]
-		if !ok {
-			log.Fatalf("Invalid renderer type '%s'; use one of %v", output, strings.Join(rendererOptions, ", "))
-		}
-
-		texts, err := cfg.App.List()
-		if err != nil {
-			log.Fatalf("Error listing texts: %v", err)
-		}
-
-		if selectedText, err := renderFunc(texts, cmd); err != nil {
-			log.Fatalf("error rendering texts: %v", err)
-		} else if bytes, err := json.MarshalIndent(selectedText, "", "\t"); selectedText != nil && err == nil {
-			fmt.Println(string(bytes))
-		}
-	},
+type ListCommand struct {
+	Output string `short:"o" enum:"tea,plain,json,jsonfeed,html" default:"tea" help:"Output format for listed texts (tea, plain, json, jsonfeed, html)."`
 }
 
-func init() {
-	rootCmd.AddCommand(listCmd)
+func (command *ListCommand) Run(rt *runtime) error {
+	renderFunc, ok := outputRenderers[outputFormat(command.Output)]
+	if !ok {
+		return invalidOption("output format", command.Output, rendererOptions)
+	}
 
-	listCmd.PersistentFlags().StringVarP(&output, "output", "o", string(OutputTea), fmt.Sprintf("output format for listed texts (%v)", strings.Join(rendererOptions, ", ")))
+	texts, err := rt.cfg.App.List()
+	if err != nil {
+		return fmt.Errorf("list texts: %w", err)
+	}
+
+	selectedText, err := renderFunc(texts, rt.stdout)
+	if err != nil {
+		return fmt.Errorf("render texts: %w", err)
+	}
+	if selectedText == nil {
+		return nil
+	}
+	bytes, err := json.MarshalIndent(selectedText, "", "\t")
+	if err != nil {
+		return fmt.Errorf("represent selected record: %w", err)
+	}
+	_, err = fmt.Fprintln(rt.stdout, string(bytes))
+	return err
 }
 
 type outputFormat string
@@ -69,12 +65,12 @@ var rendererOptions = []string{
 	string(OutputHTML),
 }
 
-type renderFunc func(texts []*text.Text, cmd *cobra.Command) (selected *text.Text, err error)
+type renderFunc func(texts []*text.Text, output io.Writer) (selected *text.Text, err error)
 
 // cli adapter for render.Functions.
 func cli(f render.Function) renderFunc {
-	return func(texts []*text.Text, cmd *cobra.Command) (*text.Text, error) {
-		return nil, f(texts, cmd.OutOrStdout())
+	return func(texts []*text.Text, output io.Writer) (*text.Text, error) {
+		return nil, f(texts, output)
 	}
 }
 
@@ -90,7 +86,7 @@ var outputRenderers = map[outputFormat]renderFunc{
 // renderTea renders a tea interface for listing/filtering texts. This is a
 // little awkward: the List interface lets us pick two strings to display, but
 // we really have 4-5.
-func renderTea(texts []*text.Text, cmd *cobra.Command) (*text.Text, error) {
+func renderTea(texts []*text.Text, _ io.Writer) (*text.Text, error) {
 	m := model{list: list.New(items(texts), list.NewDefaultDelegate(), 0, 0)}
 	m.list.Title = "Articles"
 	m.list.Filter = list.UnsortedFilter

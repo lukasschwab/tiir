@@ -7,128 +7,82 @@ import (
 	"os"
 	"strings"
 
+	"github.com/alecthomas/kong"
 	"github.com/lukasschwab/tiir/pkg/config"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var (
-	// Config initialized and closed by rootCmd pre- and post-run funcs.
-	cfg *config.Config
+// CLI describes tir's command line interface.
+type CLI struct {
+	Verbose bool `short:"v" help:"Enable verbose logging."`
 
-	// storeOptions group the available StoreTypes for rendering CLI helper
-	// text; it matches the storeFactories map keyset.
-	storeOptions = []string{
-		string(config.StoreTypeFile),
-		string(config.StoreTypeMemory),
-		string(config.StoreTypeHTTP),
-		string(config.StoreTypeLibSQL),
-	}
+	Store            *string `short:"s" enum:"file,memory,http,libsql" help:"Store to use (file, memory, http, libsql)."`
+	FileLocation     *string `name:"file-location" help:"File to use when store is file."`
+	BaseURL          *string `name:"base-url" help:"Service URL to use when store is http."`
+	APISecret        *string `name:"api-secret" help:"API secret to use when store is http."`
+	ConnectionString *string `name:"connection-string" help:"Connection string to use when store is libsql."`
+	Editor           *string `short:"e" enum:"vim,tea,huh" help:"Editor to use (vim, tea, huh)."`
 
-	// editorOptions group the available EditorTypes for rendering CLI helper
-	// text; it matches the editors map keyset.
-	editorOptions = []string{
-		string(config.EditorTypeVim),
-		string(config.EditorTypeTea),
-		string(config.EditorTypeHuh),
-	}
-
-	// specifiedTextID set for update and delete commands.
-	specifiedTextID string
-
-	// verbose set by --verbose flag.
-	verbose bool
-)
-
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "tir",
-	Short: "Log what you read",
-	Long: `tir ('Today I Read...') is a tool for logging the articles you read.
-
-By default, it writes a JSON collection to $HOME/.tir.json, with an interactive
-CLI for adding new readings.
-
-Store readings elsewhere by specifying an alternate --store:
-
-+ 'file' (default): a local JSON file. Optionally uses --file-location.
-+ 'http': a hosted tir service. Requires --base-url; some hosted services will
-  also require --api-secret.
-+ 'memory': an in-memory store that doesn't persist data between calls.
-+ 'libsql': a LibSQL-backed store, like a hosted Turso DB.
-
-Specify an editor for creating and updating records:
-
-+ 'tea' (default): interactive CLI.
-+ 'vim': open the record in a temporary file in vim.`,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
-		if !verbose {
-			log.SetOutput(io.Discard)
-		}
-
-		if cfg, err = config.Load(); err != nil {
-			return fmt.Errorf("error loading config: %w", err)
-		}
-
-		return nil
-	},
-	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-		return cfg.App.Close()
-	},
+	Create  CreateCommand  `cmd:"" help:"Record a text you read."`
+	List    ListCommand    `cmd:"" help:"List all the texts you recorded reading."`
+	Update  UpdateCommand  `cmd:"" aliases:"edit" help:"Update your record of a text you read."`
+	Delete  DeleteCommand  `cmd:"" help:"Delete your record of a text you read."`
+	Migrate MigrateCommand `cmd:"" help:"Batch-create records from an existing tir HTML file."`
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+type runtime struct {
+	cfg    *config.Config
+	stdout io.Writer
+}
+
+func (cli CLI) overrides() config.Overrides {
+	return config.Overrides{
+		StoreType:        cli.Store,
+		FileLocation:     cli.FileLocation,
+		BaseURL:          cli.BaseURL,
+		APISecret:        cli.APISecret,
+		ConnectionString: cli.ConnectionString,
+		Editor:           cli.Editor,
+	}
+}
+
+// Execute parses and executes the tir CLI.
 func Execute() {
-	err := rootCmd.Execute()
+	var cli CLI
+	parser, err := kong.New(&cli,
+		kong.Name("tir"),
+		kong.Description(`tir ('Today I Read...') logs the articles you read.
+
+By default, it writes a JSON collection to $HOME/.tir.json with an interactive
+CLI for adding readings. Configure tir with /etc/tir/.tir.config,
+$HOME/.tir.config, TIR_* environment variables, or the flags below.`),
+		kong.UsageOnError(),
+	)
 	if err != nil {
-		os.Exit(1)
+		log.Fatalf("build command line parser: %v", err)
+	}
+
+	ctx, err := parser.Parse(os.Args[1:])
+	parser.FatalIfErrorf(err)
+	if !cli.Verbose {
+		log.SetOutput(io.Discard)
+	}
+
+	cfg, err := config.Load(cli.overrides())
+	if err != nil {
+		log.Fatalf("error loading config: %v", err)
+	}
+	defer func() {
+		if err := cfg.App.Close(); err != nil {
+			log.Printf("error closing app: %v", err)
+		}
+	}()
+
+	if err := ctx.Run(&runtime{cfg: cfg, stdout: os.Stdout}); err != nil {
+		log.Fatalf("%v", err)
 	}
 }
 
-func init() {
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose logging")
-
-	flagStore := "store"
-	rootCmd.PersistentFlags().StringP(flagStore, "s", "file", fmt.Sprintf("store to use (%v)", strings.Join(storeOptions, ", ")))
-	bindPFlag(config.KeyStoreType, flagStore)
-
-	flagFileLocation := "file-location"
-	rootCmd.PersistentFlags().String(flagFileLocation, "$HOME/.tir.json", "when store is 'file,' specifies file to use")
-	bindPFlag(config.KeyFileStoreLocation, flagFileLocation)
-
-	flagBaseURL := "base-url"
-	rootCmd.PersistentFlags().String(flagBaseURL, "", "when store is 'http,' specifies service URL to use")
-	bindPFlag(config.KeyHTTPStoreBaseURL, flagBaseURL)
-	flagAPISecret := "api-secret"
-	rootCmd.PersistentFlags().String(flagAPISecret, "", "when store is 'http,' specifies API secret to authorize requests")
-	bindPFlag(config.KeyHTTPStoreAPISecret, flagAPISecret)
-
-	flagConnectionString := "connection-string"
-	rootCmd.PersistentFlags().String(flagConnectionString, "", "when store is 'libsql,' specifies where to connect")
-	bindPFlag(config.KeyLibSQLStoreConnectionString, flagConnectionString)
-
-	flagEditor := "editor"
-	rootCmd.PersistentFlags().StringP(flagEditor, "e", "tea", fmt.Sprintf("editor to use (%v)", strings.Join(editorOptions, ", ")))
-	bindPFlag(config.KeyEditor, flagEditor)
-}
-
-// bindPFlag in viper specified by configKey to the persistent cobra flag with
-// flagName.
-func bindPFlag(configKey, flagName string) {
-	if err := viper.BindPFlag(
-		configKey,
-		rootCmd.PersistentFlags().Lookup(flagName),
-	); err != nil {
-		log.Fatalf("Error binding viper flag: %v", err)
-	}
-}
-
-// requireID requires a standard ID parameter identifying an extant record.
-func requireID(cmd *cobra.Command) {
-	const flagID = "id"
-	cmd.PersistentFlags().StringVar(&specifiedTextID, flagID, "", fmt.Sprintf("The record to %v.", cmd.Name()))
-	if err := cmd.MarkPersistentFlagRequired(flagID); err != nil {
-		log.Fatalf("Error marking %v flag required: %v", flagID, err)
-	}
+func optionList(options []string) string { return strings.Join(options, ", ") }
+func invalidOption(name, value string, options []string) error {
+	return fmt.Errorf("invalid %s %q; use one of %s", name, value, optionList(options))
 }

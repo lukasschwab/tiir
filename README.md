@@ -23,7 +23,7 @@ By default, `tir` is configured to use the rich CLI interface (see [pkg/edit/tea
 
 To override those defaults, see [Configuration](#configuration).
 
-For CLI documentation, run `tir help`.
+For CLI documentation, run `tir --help`.
 
 ### HTTP server
 
@@ -50,7 +50,7 @@ $ flyctl secrets set TIR_API_SECRET=YOUR_SECRET_HERE
 1. *Store* for persisting and retrieving texts.
 2. *Editor* for viewing and modifying texts.
 
-Some example configurations are provided below. Run `tir help` or read [./pkg/config/config.go](./pkg/config/config.go) for more details.
+Some example configurations are provided below. Run `tir --help` or read [./pkg/config/config.go](./pkg/config/config.go) for more details.
 
 ### Local file store
 
