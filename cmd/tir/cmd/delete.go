@@ -2,29 +2,23 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
-
-	"github.com/spf13/cobra"
 )
 
-// deleteCmd represents the delete command
-var deleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Delete your record of a text you read",
-	Long: `Delete a tir record by ID in the configured store. For store and editor options,
-see tir --help.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		if deleted, err := cfg.App.Delete(specifiedTextID); err != nil {
-			log.Fatalf("error deleting record: %v", err)
-		} else if repr, err := json.MarshalIndent(deleted, "", "\t"); err != nil {
-			log.Fatalf("error representing deleted record '%v': %v", deleted.ID, err)
-		} else {
-			log.Printf("successfully deleted record %v: %s", deleted.ID, repr)
-		}
-	},
+type DeleteCommand struct {
+	ID string `name:"id" required:"" help:"The record to delete."`
 }
 
-func init() {
-	rootCmd.AddCommand(deleteCmd)
-	requireID(deleteCmd)
+func (command *DeleteCommand) Run(rt *runtime) error {
+	deleted, err := rt.cfg.App.Delete(command.ID)
+	if err != nil {
+		return fmt.Errorf("delete record: %w", err)
+	}
+	repr, err := json.MarshalIndent(deleted, "", "\t")
+	if err != nil {
+		return fmt.Errorf("represent deleted record %q: %w", deleted.ID, err)
+	}
+	log.Printf("successfully deleted record %v: %s", deleted.ID, repr)
+	return nil
 }

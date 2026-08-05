@@ -2,51 +2,51 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/lukasschwab/tiir/pkg/text"
 	"github.com/lukasschwab/tiir/pkg/web"
-	"github.com/spf13/cobra"
 )
 
-// createCmd represents the create command
-var createCmd = &cobra.Command{
-	Use:   "create [url]...",
-	Short: "Record a text you read",
-	Long: `Create a tir record in the configured store. For documentation of store and editor options, see
-tir --help.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			from(&text.Text{})
-			return
-		}
-		for _, url := range args {
-			fromUrl(url)
-		}
-	},
+type CreateCommand struct {
+	URLs []string `arg:"" optional:"" name:"url" help:"URLs to record."`
 }
 
-func init() {
-	rootCmd.AddCommand(createCmd)
-}
-
-func fromUrl(url string) {
-	if initial, err := web.WebMetadata(url); err != nil {
-		log.Printf("coultn't read '%s'; skipping: %v", url, err)
-		from(&text.Text{URL: url})
-	} else {
-		from(initial)
+func (command *CreateCommand) Run(rt *runtime) error {
+	if len(command.URLs) == 0 {
+		return createFrom(rt, &text.Text{})
 	}
+	for _, url := range command.URLs {
+		if err := createFromURL(rt, url); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func from(initial *text.Text) {
-	if final, err := initial.EditWith(cfg.Editor); err != nil {
-		log.Fatalf("couldn't run editor: %v", err)
-	} else if created, err := cfg.App.Create(final); err != nil {
-		log.Fatalf("error comitting new record: %v", err)
-	} else if repr, err := json.MarshalIndent(created, "", "\t"); err != nil {
-		log.Fatalf("error representing created record '%v': %v", created.ID, err)
-	} else {
-		log.Printf("successfully created record %v: %s", created.ID, repr)
+func createFromURL(rt *runtime, url string) error {
+	initial, err := web.WebMetadata(url)
+	if err != nil {
+		log.Printf("couldn't read %q; continuing without metadata: %v", url, err)
+		initial = &text.Text{URL: url}
 	}
+	return createFrom(rt, initial)
+}
+
+func createFrom(rt *runtime, initial *text.Text) error {
+	final, err := initial.EditWith(rt.cfg.Editor)
+	if err != nil {
+		return fmt.Errorf("run editor: %w", err)
+	}
+	created, err := rt.cfg.App.Create(final)
+	if err != nil {
+		return fmt.Errorf("create record: %w", err)
+	}
+	repr, err := json.MarshalIndent(created, "", "\t")
+	if err != nil {
+		return fmt.Errorf("represent created record %q: %w", created.ID, err)
+	}
+	log.Printf("successfully created record %v: %s", created.ID, repr)
+	return nil
 }
