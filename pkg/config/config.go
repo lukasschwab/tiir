@@ -45,17 +45,6 @@ const (
 	EditorTypeHuh editorType = "huh"
 )
 
-// Overrides are command-line values. Nil fields leave lower-precedence sources
-// unchanged.
-type Overrides struct {
-	StoreType        *string
-	FileLocation     *string
-	BaseURL          *string
-	APISecret        *string
-	ConnectionString *string
-	Editor           *string
-}
-
 type values struct {
 	Store struct {
 		Type             string `json:"type"`
@@ -88,18 +77,18 @@ type envValues struct {
 	Editor           *string `env:"TIR_EDITOR,noinit"`
 }
 
-// Load constructs a configured application from the process environment. Values
+// Load constructs a configured application from the supplied lookupers. Values
 // are applied in this order: defaults, /etc/tir/.tir.config,
-// $HOME/.tir.config, environment, and overrides.
-func Load(overrides ...Overrides) (*Config, error) {
-	return load(configPaths(), []envconfig.Lookuper{envconfig.OsLookuper()}, overrides...)
+// $HOME/.tir.config, and lookupers in priority order.
+func Load(lookupers ...envconfig.Lookuper) (*Config, error) {
+	return load(configPaths(), lookupers)
 }
 
 // load constructs a configured application using the supplied configuration
 // paths and environment lookupers. Lookupers are evaluated in priority order,
 // letting tests use isolated files and map-backed values rather than mutating
 // process state.
-func load(paths []string, lookupers []envconfig.Lookuper, overrides ...Overrides) (*Config, error) {
+func load(paths []string, lookupers []envconfig.Lookuper) (*Config, error) {
 	if len(lookupers) == 0 {
 		lookupers = []envconfig.Lookuper{envconfig.OsLookuper()}
 	}
@@ -120,9 +109,6 @@ func load(paths []string, lookupers []envconfig.Lookuper, overrides ...Overrides
 		return nil, fmt.Errorf("read environment: %w", err)
 	}
 	applyEnv(&v, env)
-	for _, override := range overrides {
-		applyOverrides(&v, override)
-	}
 
 	cfg := &Config{values: v}
 	if err := cfg.initialize(); err != nil {
@@ -181,15 +167,6 @@ func applyEnv(v *values, env envValues) {
 	apply(&v.Store.APISecret, env.APISecret)
 	apply(&v.Store.ConnectionString, env.ConnectionString)
 	apply(&v.Editor, env.Editor)
-}
-
-func applyOverrides(v *values, overrides Overrides) {
-	apply(&v.Store.Type, overrides.StoreType)
-	apply(&v.Store.Path, overrides.FileLocation)
-	apply(&v.Store.BaseURL, overrides.BaseURL)
-	apply(&v.Store.APISecret, overrides.APISecret)
-	apply(&v.Store.ConnectionString, overrides.ConnectionString)
-	apply(&v.Editor, overrides.Editor)
 }
 
 func apply(destination *string, source *string) {

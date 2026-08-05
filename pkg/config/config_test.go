@@ -26,19 +26,19 @@ func TestLoadLookupersOverrideConfigFileInPriorityOrder(t *testing.T) {
 	assert.Equal(t, "from-primary", cfg.GetAPISecret())
 }
 
-func TestLoadCommandLineOverridesEnvironment(t *testing.T) {
-	secret := "from-flag"
-
+func TestLoadHigherPriorityLookuperWins(t *testing.T) {
 	cfg, err := load(
 		nil,
-		[]envconfig.Lookuper{envconfig.MapLookuper(map[string]string{
-			"TIR_API_SECRET": "from-env",
-			"TIR_TYPE":       "memory",
-		})},
-		Overrides{APISecret: &secret},
+		[]envconfig.Lookuper{
+			envconfig.MapLookuper(map[string]string{
+				"TIR_API_SECRET": "from-primary",
+				"TIR_TYPE":       "memory",
+			}),
+			envconfig.MapLookuper(map[string]string{"TIR_API_SECRET": "from-fallback"}),
+		},
 	)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, cfg.App.Close()) })
 	assert.Equal(t, "memory", cfg.values.Store.Type)
-	assert.Equal(t, "from-flag", cfg.GetAPISecret())
+	assert.Equal(t, "from-primary", cfg.GetAPISecret())
 }
