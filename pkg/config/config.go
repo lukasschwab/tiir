@@ -92,17 +92,18 @@ type envValues struct {
 // are applied in this order: defaults, /etc/tir/.tir.config,
 // $HOME/.tir.config, environment, and overrides.
 func Load(overrides ...Overrides) (*Config, error) {
-	return load(configPaths(), envconfig.OsLookuper(), overrides...)
+	return load(configPaths(), []envconfig.Lookuper{envconfig.OsLookuper()}, overrides...)
 }
 
 // load constructs a configured application using the supplied configuration
-// paths and environment lookuper. Keeping both dependencies explicit lets tests
-// use isolated files and a map-backed lookuper rather than mutating process
-// state.
-func load(paths []string, lookuper envconfig.Lookuper, overrides ...Overrides) (*Config, error) {
-	if lookuper == nil {
-		lookuper = envconfig.OsLookuper()
+// paths and environment lookupers. Lookupers are evaluated in priority order,
+// letting tests use isolated files and map-backed values rather than mutating
+// process state.
+func load(paths []string, lookupers []envconfig.Lookuper, overrides ...Overrides) (*Config, error) {
+	if len(lookupers) == 0 {
+		lookupers = []envconfig.Lookuper{envconfig.OsLookuper()}
 	}
+	lookuper := envconfig.MultiLookuper(lookupers...)
 
 	v := defaultValues()
 	for _, path := range paths {

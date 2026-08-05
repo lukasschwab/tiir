@@ -10,17 +10,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadEnvironmentOverridesConfigFile(t *testing.T) {
+func TestLoadLookupersOverrideConfigFileInPriorityOrder(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), ".tir.config")
 	require.NoError(t, os.WriteFile(configPath, []byte(`{"store":{"type":"http","base_url":"https://example.test","api_secret":"from-file"}}`), 0o600))
 
 	cfg, err := load(
 		[]string{configPath},
-		envconfig.MapLookuper(map[string]string{"TIR_API_SECRET": "from-env"}),
+		[]envconfig.Lookuper{
+			envconfig.MapLookuper(map[string]string{"TIR_API_SECRET": "from-primary"}),
+			envconfig.MapLookuper(map[string]string{"TIR_API_SECRET": "from-fallback"}),
+		},
 	)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, cfg.App.Close()) })
-	assert.Equal(t, "from-env", cfg.GetAPISecret())
+	assert.Equal(t, "from-primary", cfg.GetAPISecret())
 }
 
 func TestLoadCommandLineOverridesEnvironment(t *testing.T) {
@@ -28,10 +31,10 @@ func TestLoadCommandLineOverridesEnvironment(t *testing.T) {
 
 	cfg, err := load(
 		nil,
-		envconfig.MapLookuper(map[string]string{
+		[]envconfig.Lookuper{envconfig.MapLookuper(map[string]string{
 			"TIR_API_SECRET": "from-env",
 			"TIR_TYPE":       "memory",
-		}),
+		})},
 		Overrides{APISecret: &secret},
 	)
 	require.NoError(t, err)
