@@ -26,6 +26,19 @@ func TestLoadLookupersOverrideConfigFileInPriorityOrder(t *testing.T) {
 	assert.Equal(t, "from-primary", cfg.GetAPISecret())
 }
 
+func TestLoadLaterConfigFileOverridesEarlierConfigFile(t *testing.T) {
+	configDir := t.TempDir()
+	firstPath := filepath.Join(configDir, "first.json")
+	secondPath := filepath.Join(configDir, "second.json")
+	require.NoError(t, os.WriteFile(firstPath, []byte(`{"store":{"type":"http","base_url":"https://example.test","api_secret":"from-first"}}`), 0o600))
+	require.NoError(t, os.WriteFile(secondPath, []byte(`{"store":{"api_secret":"from-second"}}`), 0o600))
+
+	cfg, err := load([]string{firstPath, secondPath}, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, cfg.App.Close()) })
+	assert.Equal(t, "from-second", cfg.GetAPISecret())
+}
+
 func TestLoadHigherPriorityLookuperWins(t *testing.T) {
 	cfg, err := load(
 		nil,

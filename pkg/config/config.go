@@ -67,6 +67,44 @@ type fileValues struct {
 	Editor *string `json:"editor"`
 }
 
+type fileLookuper map[string]string
+
+func (lookuper fileLookuper) Lookup(key string) (string, bool) {
+	value, ok := lookuper[key]
+	return value, ok
+}
+
+func newFileLookuper(path string) (envconfig.Lookuper, error) {
+	contents, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read config file %q: %w", path, err)
+	}
+
+	var file fileValues
+	if err := json.Unmarshal(contents, &file); err != nil {
+		return nil, fmt.Errorf("parse config file %q: %w", path, err)
+	}
+
+	values := make(fileLookuper)
+	put := func(key string, value *string) {
+		if value != nil {
+			values[key] = *value
+		}
+	}
+	if file.Store != nil {
+		put("TIR_TYPE", file.Store.Type)
+		put("TIR_STORE_PATH", file.Store.Path)
+		put("TIR_STORE_BASE_URL", file.Store.BaseURL)
+		put("TIR_API_SECRET", file.Store.APISecret)
+		put("TIR_CONNECTION_STRING", file.Store.ConnectionString)
+	}
+	put("TIR_EDITOR", file.Editor)
+	return values, nil
+}
+
 type envValues struct {
 	StoreType        *string `env:"TIR_TYPE,noinit"`
 	StoreTypeNested  *string `env:"TIR_STORE_TYPE,noinit"`
@@ -89,38 +127,42 @@ func Load(lookuper envconfig.Lookuper, fallbacks ...envconfig.Lookuper) (*Config
 // letting tests use isolated files and map-backed values rather than mutating
 // process state.
 func load(paths []string, lookupers []envconfig.Lookuper) (*Config, error) {
-	lookuper := envconfig.MultiLookuper(lookupers...)
-
-	v := defaultValues()
-	for _, path := range paths {
-		if err := applyFile(&v, path); err != nil {
+	sources := append([]envconfig.Lookuper{}, lookupers...)
+	for i := len(paths) - 1; i >= 0; i-- {
+		lookuper, err := newFileLookuper(paths[i])
+		if err != nil {
 			return nil, err
 		}
+		if lookuper != nil {
+			sources = append(sources, lookuper)
+		}
 	}
+	sources = append(sources, defaultLookuper())
 
 	var env envValues
 	if err := envconfig.ProcessWith(context.Background(), &envconfig.Config{
 		Target:   &env,
-		Lookuper: lookuper,
+		Lookuper: envconfig.MultiLookuper(sources...),
 	}); err != nil {
 		return nil, fmt.Errorf("read environment: %w", err)
 	}
-	applyEnv(&v, env)
 
-	cfg := &Config{values: v}
+	cfg := &Config{values: valuesFrom(env)}
 	if err := cfg.initialize(); err != nil {
 		return cfg, err
 	}
 	return cfg, nil
 }
 
-func defaultValues() values {
-	v := values{Editor: string(EditorTypeTea)}
-	v.Store.Type = string(StoreTypeFile)
-	if home, err := os.UserHomeDir(); err == nil {
-		v.Store.Path = filepath.Join(home, ".tir.json")
+func defaultLookuper() envconfig.Lookuper {
+	values := map[string]string{
+		"TIR_TYPE":   string(StoreTypeFile),
+		"TIR_EDITOR": string(EditorTypeTea),
 	}
-	return v
+	if home, err := os.UserHomeDir(); err == nil {
+		values["TIR_STORE_PATH"] = filepath.Join(home, ".tir.json")
+	}
+	return envconfig.MapLookuper(values)
 }
 
 func configPaths() []string {
@@ -131,39 +173,19 @@ func configPaths() []string {
 	return paths
 }
 
-func applyFile(v *values, path string) error {
-	contents, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("read config file %q: %w", path, err)
-	}
-	var file fileValues
-	if err := json.Unmarshal(contents, &file); err != nil {
-		return fmt.Errorf("parse config file %q: %w", path, err)
-	}
-	if file.Store != nil {
-		apply(&v.Store.Type, file.Store.Type)
-		apply(&v.Store.Path, file.Store.Path)
-		apply(&v.Store.BaseURL, file.Store.BaseURL)
-		apply(&v.Store.APISecret, file.Store.APISecret)
-		apply(&v.Store.ConnectionString, file.Store.ConnectionString)
-	}
-	apply(&v.Editor, file.Editor)
-	return nil
-}
+func valuesFrom(env envValues) values {
+	var values values
 
-func applyEnv(v *values, env envValues) {
 	// TIR_TYPE is the legacy Viper spelling. TIR_STORE_TYPE is accepted as a
 	// more descriptive alias, with the latter taking precedence when both exist.
-	apply(&v.Store.Type, env.StoreType)
-	apply(&v.Store.Type, env.StoreTypeNested)
-	apply(&v.Store.Path, env.FileLocation)
-	apply(&v.Store.BaseURL, env.BaseURL)
-	apply(&v.Store.APISecret, env.APISecret)
-	apply(&v.Store.ConnectionString, env.ConnectionString)
-	apply(&v.Editor, env.Editor)
+	apply(&values.Store.Type, env.StoreType)
+	apply(&values.Store.Type, env.StoreTypeNested)
+	apply(&values.Store.Path, env.FileLocation)
+	apply(&values.Store.BaseURL, env.BaseURL)
+	apply(&values.Store.APISecret, env.APISecret)
+	apply(&values.Store.ConnectionString, env.ConnectionString)
+	apply(&values.Editor, env.Editor)
+	return values
 }
 
 func apply(destination *string, source *string) {
