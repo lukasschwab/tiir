@@ -88,21 +88,37 @@ type envValues struct {
 	Editor           string `env:"TIR_EDITOR"`
 }
 
-// Load constructs a configured application. Values are applied in this order:
-// defaults, /etc/tir/.tir.config, $HOME/.tir.config, environment, and overrides.
+// Load constructs a configured application from the process environment. Values
+// are applied in this order: defaults, /etc/tir/.tir.config,
+// $HOME/.tir.config, environment, and overrides.
 func Load(overrides ...Overrides) (*Config, error) {
+	return load(configPaths(), envconfig.OsLookuper(), overrides...)
+}
+
+// load constructs a configured application using the supplied configuration
+// paths and environment lookuper. Keeping both dependencies explicit lets tests
+// use isolated files and a map-backed lookuper rather than mutating process
+// state.
+func load(paths []string, lookuper envconfig.Lookuper, overrides ...Overrides) (*Config, error) {
+	if lookuper == nil {
+		lookuper = envconfig.OsLookuper()
+	}
+
 	v := defaultValues()
-	for _, path := range configPaths() {
+	for _, path := range paths {
 		if err := applyFile(&v, path); err != nil {
 			return nil, err
 		}
 	}
 
 	var env envValues
-	if err := envconfig.Process(context.Background(), &env); err != nil {
+	if err := envconfig.ProcessWith(context.Background(), &envconfig.Config{
+		Target:   &env,
+		Lookuper: lookuper,
+	}); err != nil {
 		return nil, fmt.Errorf("read environment: %w", err)
 	}
-	applyEnv(&v, env)
+	applyEnv(&v, env, lookuper)
 	for _, override := range overrides {
 		applyOverrides(&v, override)
 	}
@@ -154,20 +170,20 @@ func applyFile(v *values, path string) error {
 	return nil
 }
 
-func applyEnv(v *values, env envValues) {
+func applyEnv(v *values, env envValues, lookuper envconfig.Lookuper) {
 	// TIR_TYPE is the legacy Viper spelling. TIR_STORE_TYPE is accepted as a
 	// more descriptive alias, with the latter taking precedence when both exist.
-	applyEnvironment(&v.Store.Type, "TIR_TYPE", env.StoreType)
-	applyEnvironment(&v.Store.Type, "TIR_STORE_TYPE", env.StoreTypeNested)
-	applyEnvironment(&v.Store.Path, "TIR_STORE_PATH", env.FileLocation)
-	applyEnvironment(&v.Store.BaseURL, "TIR_STORE_BASE_URL", env.BaseURL)
-	applyEnvironment(&v.Store.APISecret, "TIR_API_SECRET", env.APISecret)
-	applyEnvironment(&v.Store.ConnectionString, "TIR_CONNECTION_STRING", env.ConnectionString)
-	applyEnvironment(&v.Editor, "TIR_EDITOR", env.Editor)
+	applyEnvironment(&v.Store.Type, "TIR_TYPE", env.StoreType, lookuper)
+	applyEnvironment(&v.Store.Type, "TIR_STORE_TYPE", env.StoreTypeNested, lookuper)
+	applyEnvironment(&v.Store.Path, "TIR_STORE_PATH", env.FileLocation, lookuper)
+	applyEnvironment(&v.Store.BaseURL, "TIR_STORE_BASE_URL", env.BaseURL, lookuper)
+	applyEnvironment(&v.Store.APISecret, "TIR_API_SECRET", env.APISecret, lookuper)
+	applyEnvironment(&v.Store.ConnectionString, "TIR_CONNECTION_STRING", env.ConnectionString, lookuper)
+	applyEnvironment(&v.Editor, "TIR_EDITOR", env.Editor, lookuper)
 }
 
-func applyEnvironment(destination *string, name, value string) {
-	if _, ok := os.LookupEnv(name); ok {
+func applyEnvironment(destination *string, name, value string, lookuper envconfig.Lookuper) {
+	if _, ok := lookuper.Lookup(name); ok {
 		*destination = value
 	}
 }
