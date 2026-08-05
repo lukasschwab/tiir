@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -48,10 +49,10 @@ const (
 type values struct {
 	Store struct {
 		Type             string `json:"type"`
-		Path             string `json:"path"`
-		BaseURL          string `json:"base_url"`
-		APISecret        string `json:"api_secret"`
-		ConnectionString string `json:"connection_string"`
+		Path             string `json:"path,omitempty"`
+		BaseURL          string `json:"base_url,omitempty"`
+		APISecret        string `json:"api_secret,omitempty"`
+		ConnectionString string `json:"connection_string,omitempty"`
 	} `json:"store"`
 	Editor string `json:"editor"`
 }
@@ -250,5 +251,40 @@ func (cfg *Config) initialize() error {
 	return nil
 }
 
+const maskedSecret = "REDACTED"
+
 // GetAPISecret returns the configured API secret.
 func (cfg *Config) GetAPISecret() string { return cfg.values.Store.APISecret }
+
+// MaskedJSON returns the resolved configuration formatted as a JSON config
+// file, with secrets replaced by a fixed mask.
+func (cfg *Config) MaskedJSON() ([]byte, error) {
+	values := cfg.values
+	if values.Store.APISecret != "" {
+		values.Store.APISecret = maskedSecret
+	}
+	values.Store.ConnectionString = maskConnectionString(values.Store.ConnectionString)
+	return json.MarshalIndent(values, "", "\t")
+}
+
+func maskConnectionString(connectionString string) string {
+	if connectionString == "" {
+		return ""
+	}
+
+	parsed, err := url.Parse(connectionString)
+	if err != nil {
+		return maskedSecret
+	}
+	if parsed.User != nil {
+		if _, hasPassword := parsed.User.Password(); hasPassword {
+			parsed.User = url.UserPassword(parsed.User.Username(), maskedSecret)
+		}
+	}
+	query := parsed.Query()
+	if query.Has("authToken") {
+		query.Set("authToken", maskedSecret)
+		parsed.RawQuery = query.Encode()
+	}
+	return parsed.String()
+}
