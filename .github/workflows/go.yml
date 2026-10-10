@@ -11,9 +11,10 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: cloudx-io/setup-go@8b45cf394acf101459db0d47aa9735a4fe5eea63
         with:
           go-version: '1.26'
+          cache-key-prefix: test
       - name: Build
         run: go build -v ./...
       - name: Test
@@ -28,9 +29,10 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: cloudx-io/setup-go@8b45cf394acf101459db0d47aa9735a4fe5eea63
         with:
           go-version: '1.26'
+          cache-key-prefix: release
       - name: Set short git commit SHA
         id: vars
         run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
