@@ -1,0 +1,116 @@
+name: Setup Go cache modes
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  seed:
+    name: seed-${{ matrix.mode }}
+    runs-on: ubuntu-24.04-arm
+    continue-on-error: ${{ matrix.mode == 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [default, true, false, failure]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup with default save
+        if: matrix.mode == 'default'
+        id: default
+        uses: cloudx-io/setup-go@54eb21cbc5ab79554dc6d21ee57f23c2a92761eb
+        with:
+          go-version: '1.26'
+          cache-key-prefix: modes-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.mode }}
+      - name: Setup with explicit save
+        if: matrix.mode != 'default'
+        id: explicit
+        uses: cloudx-io/setup-go@54eb21cbc5ab79554dc6d21ee57f23c2a92761eb
+        with:
+          go-version: '1.26'
+          cache-key-prefix: modes-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.mode }}
+          save: ${{ matrix.mode != 'false' }}
+      - name: Assert cold miss
+        env:
+          MATCHED: ${{ steps.default.outputs.cache-matched-key || steps.explicit.outputs.cache-matched-key }}
+          HIT: ${{ steps.default.outputs.cache-hit || steps.explicit.outputs.cache-hit }}
+        run: |
+          test -z "$MATCHED"
+          test "$HIT" != true
+      - name: Build and test real Go code
+        if: matrix.mode == 'default' || matrix.mode == 'true'
+        run: nice -n 10 go test -short -count=1 ./...
+      - name: Create post-setup cache fixtures
+        run: |
+          mkdir -p "$(go env GOCACHE)/mode-fixtures" "$(go env GOMODCACHE)"
+          echo stale > "$(go env GOCACHE)/mode-fixtures/stale"
+          touch -d '7 days ago' "$(go env GOCACHE)/mode-fixtures/stale"
+          echo fresh > "$(go env GOCACHE)/mode-fixtures/fresh"
+          echo modules > "$(go env GOMODCACHE)/mode-fixture"
+      - name: Intentional failure
+        if: matrix.mode == 'failure'
+        run: exit 1
+
+  restore:
+    name: restore-${{ matrix.mode }}-${{ matrix.match }}
+    needs: seed
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {mode: default, match: prefix}
+          - {mode: true, match: prefix}
+          - {mode: default, match: prefix-save}
+          - {mode: true, match: prefix-save}
+          - {mode: default, match: exact}
+          - {mode: true, match: exact}
+          - {mode: false, match: miss}
+          - {mode: failure, match: miss}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Restore cache
+        id: restore
+        uses: cloudx-io/setup-go@54eb21cbc5ab79554dc6d21ee57f23c2a92761eb
+        with:
+          go-version: '1.26'
+          cache-key-prefix: modes-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.mode }}
+          cache-dependency-path: ${{ matrix.match == 'exact' && '**/go.sum' || matrix.match == 'prefix-save' && 'LICENSE' || 'go.mod' }}
+          save: ${{ matrix.match == 'exact' || matrix.match == 'prefix-save' }}
+      - name: Assert restored key and cache contents
+        env:
+          MATCHED: ${{ steps.restore.outputs.cache-matched-key }}
+          HIT: ${{ steps.restore.outputs.cache-hit }}
+          MATCH: ${{ matrix.match }}
+          PREFIX: modes-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.mode }}
+        run: |
+          if [ "$MATCH" = miss ]; then
+            test -z "$MATCHED"
+            test "$HIT" != true
+            test ! -e "$(go env GOCACHE)/mode-fixtures/fresh"
+            test ! -e "$(go env GOMODCACHE)/mode-fixture"
+          else
+            [[ "$MATCHED" == *"-$PREFIX-"* ]]
+            [[ "$MATCHED" == *"-${{ github.run_id }}" ]]
+            if [ "$MATCH" = exact ]; then test "$HIT" = true; else test "$HIT" = false; fi
+            test ! -e "$(go env GOCACHE)/mode-fixtures/stale"
+            grep -qx fresh "$(go env GOCACHE)/mode-fixtures/fresh"
+            grep -qx modules "$(go env GOMODCACHE)/mode-fixture"
+          fi
+
+  audit:
+    name: audit
+    needs: [seed, restore]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Audit cache inventory and post-job logs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/audit-setup-go-cache.cjs
