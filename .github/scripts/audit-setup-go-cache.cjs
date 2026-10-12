@@ -30,15 +30,20 @@ async function main() {
 
   const jobs = pages(`repos/${repo}/actions/runs/${run}/attempts/${attempt}/jobs?per_page=100`)
     .flatMap(page => page.jobs)
-    .filter(job => job.name.startsWith('seed-') || job.name.startsWith('restore-'));
-  assert.equal(jobs.length, 12);
+    .filter(job => job.name.startsWith('seed-') || job.name.startsWith('restore-') || job.name === 'rerun');
+  assert.equal(jobs.length, 13);
+  const rerunCaches = pages(`repos/${repo}/actions/caches?per_page=100`)
+    .flatMap(page => page.actions_caches)
+    .filter(cache => cache.key.includes(`-modes-rerun-${run}-`));
+  assert.equal(rerunCaches.length, 1, 'Stable run key must have exactly one uploaded cache');
   const timings = [];
   for (const job of jobs) {
     const intentionalFailure = job.name === 'seed-failure';
     assert.equal(job.conclusion, intentionalFailure ? 'failure' : 'success', job.name);
     const log = await logs(job.id);
     const shouldSave = ['seed-default', 'seed-true',
-      'restore-default-prefix-save', 'restore-true-prefix-save'].includes(job.name);
+      'restore-default-prefix-save', 'restore-true-prefix-save'].includes(job.name)
+      || (job.name === 'rerun' && attempt === '1');
     const shouldRegister = shouldSave || intentionalFailure;
     const registration = /##\[group\]Run actions\/cache@/.test(log);
     assert.equal(registration, shouldRegister, `${job.name}: save registration`);
@@ -71,6 +76,7 @@ async function main() {
     '',
     'All cold-miss, default/explicit-save, restore-only, prefix-refresh, exact-hit,',
     'failed-job, trim-before-upload, and restored-fixture checks passed.',
+    `Stable run key: ${attempt === '1' ? 'first-attempt miss and save' : 'rerun exact hit without trimming or uploading'} verified.`,
     '',
     '| Save-registration step | Duration (ms) |',
     '| --- | ---: |',

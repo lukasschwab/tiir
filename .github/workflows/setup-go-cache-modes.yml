@@ -103,9 +103,41 @@ jobs:
             grep -qx modules "$(go env GOMODCACHE)/mode-fixture"
           fi
 
+  rerun:
+    name: rerun
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v6
+      - name: Restore stable run key
+        id: restore
+        uses: cloudx-io/setup-go@34b5993a844a57512a8fddcfb05c0ab2d1f31a4e
+        with:
+          go-version: '1.26'
+          cache-key-prefix: modes-rerun-${{ github.run_id }}
+      - name: Assert first-attempt miss or rerun exact hit
+        env:
+          MATCHED: ${{ steps.restore.outputs.cache-matched-key }}
+          HIT: ${{ steps.restore.outputs.cache-hit }}
+          ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          if [ "$ATTEMPT" = 1 ]; then
+            test -z "$MATCHED"
+            test "$HIT" != true
+            mkdir -p "$(go env GOCACHE)/rerun-fixtures"
+            echo fresh > "$(go env GOCACHE)/rerun-fixtures/fresh"
+            echo stale > "$(go env GOCACHE)/rerun-fixtures/stale"
+            touch -d '7 days ago' "$(go env GOCACHE)/rerun-fixtures/stale"
+          else
+            test "$HIT" = true
+            [[ "$MATCHED" == *"-modes-rerun-${{ github.run_id }}-"* ]]
+            [[ "$MATCHED" == *"-${{ github.run_id }}" ]]
+            grep -qx fresh "$(go env GOCACHE)/rerun-fixtures/fresh"
+            test ! -e "$(go env GOCACHE)/rerun-fixtures/stale"
+          fi
+
   audit:
     name: audit
-    needs: [seed, restore]
+    needs: [seed, restore, rerun]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
