@@ -22,14 +22,14 @@ jobs:
       - name: Setup with default save
         if: matrix.mode == 'default'
         id: default
-        uses: cloudx-io/setup-go@54eb21cbc5ab79554dc6d21ee57f23c2a92761eb
+        uses: cloudx-io/setup-go@34b5993a844a57512a8fddcfb05c0ab2d1f31a4e
         with:
           go-version: '1.26'
           cache-key-prefix: modes-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.mode }}
       - name: Setup with explicit save
         if: matrix.mode != 'default'
         id: explicit
-        uses: cloudx-io/setup-go@54eb21cbc5ab79554dc6d21ee57f23c2a92761eb
+        uses: cloudx-io/setup-go@34b5993a844a57512a8fddcfb05c0ab2d1f31a4e
         with:
           go-version: '1.26'
           cache-key-prefix: modes-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.mode }}
@@ -76,7 +76,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: Restore cache
         id: restore
-        uses: cloudx-io/setup-go@54eb21cbc5ab79554dc6d21ee57f23c2a92761eb
+        uses: cloudx-io/setup-go@34b5993a844a57512a8fddcfb05c0ab2d1f31a4e
         with:
           go-version: '1.26'
           cache-key-prefix: modes-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.mode }}
