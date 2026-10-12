@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [default, true, false, failure]
+        mode: [default, 'true', 'false', failure]
     steps:
       - uses: actions/checkout@v6
       - name: Setup with default save
@@ -65,12 +65,12 @@ jobs:
       matrix:
         include:
           - {mode: default, match: prefix}
-          - {mode: true, match: prefix}
+          - {mode: 'true', match: prefix}
           - {mode: default, match: prefix-save}
-          - {mode: true, match: prefix-save}
+          - {mode: 'true', match: prefix-save}
           - {mode: default, match: exact}
-          - {mode: true, match: exact}
-          - {mode: false, match: miss}
+          - {mode: 'true', match: exact}
+          - {mode: 'false', match: miss}
           - {mode: failure, match: miss}
     steps:
       - uses: actions/checkout@v6
